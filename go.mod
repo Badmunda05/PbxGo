@@ -3,7 +3,7 @@ module pbxgo
 go 1.24.0
 
 require (
-	github.com/amarnathcjd/gogram v1.9.0
+	github.com/amarnathcjd/gogram v1.7.0
 	github.com/joho/godotenv v1.5.1
 	go.mongodb.org/mongo-driver/v2 v2.2.0
 )
