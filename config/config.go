@@ -14,6 +14,7 @@ type Config struct {
 	MongoURL      string
 	StringSession string
 	BotToken      string
+	OwnerID       int64
 }
 
 var AppConfig Config
@@ -29,15 +30,22 @@ func Load() {
 		os.Exit(1)
 	}
 
+	ownerID, err := strconv.ParseInt(mustGetEnv("OWNER_ID"), 10, 64)
+	if err != nil {
+		slog.Error("Invalid OWNER_ID — set your Telegram user ID in .env", "error", err)
+		os.Exit(1)
+	}
+
 	AppConfig = Config{
 		AppID:         int32(appID),
 		AppHash:       mustGetEnv("APP_HASH"),
 		MongoURL:      getEnv("MONGO_URL", ""),
 		StringSession: getEnv("STRING_SESSION", ""),
 		BotToken:      getEnv("BOT_TOKEN", ""),
+		OwnerID:       ownerID,
 	}
 
-	slog.Info("Config loaded successfully")
+	slog.Info("Config loaded", "owner_id", AppConfig.OwnerID)
 }
 
 func getEnv(key, fallback string) string {

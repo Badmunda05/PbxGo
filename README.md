@@ -1,18 +1,19 @@
 # 🤖 PbxGo
 
-> Modular Telegram Userbot/Bot — written in **Go 1.24** using [gogram](https://github.com/amarnathcjd/gogram)
+> Modular Telegram Userbot/Bot — **Go 1.24** | [gogram](https://github.com/amarnathcjd/gogram)
 
 ---
 
 ## ✨ Features
 
-- ⚡ **Go 1.24** — latest language features, `log/slog`, structured logging
-- 🤖 **Bot Token** support (run as a normal bot via `BOT_TOKEN`)
-- 👤 **Userbot** support (run as your account via `STRING_SESSION`)
-- 🔐 **Sudo Management** — `.addsudo`, `.rmsudo`, `.listsudo`
-- 🗄️ **MongoDB v2** — optional persistent sudo storage (`mongo-driver/v2`)
-- 🔒 **Thread-safe** — `sync.Map` for concurrent sudo access
-- 🧩 **Modular** — drop new `.go` files in `modules/` to extend
+- ⚡ **Go 1.24** — `log/slog`, structured logging, modern stdlib
+- 🔐 **OWNER_ID** — all commands locked to owner only (no spam risk)
+- 🤖 **Bot Token** support via `BOT_TOKEN`
+- 👤 **Userbot** support via `STRING_SESSION`
+- 👥 **Sudo Management** — `.addsudo`, `.rmsudo`, `.listsudo`
+- 🗄️ **MongoDB v2** — optional persistent sudo storage
+- 🔒 **Thread-safe** — `sync.Map` for concurrent access
+- 🧩 **Modular** — drop `.go` files in `modules/` to extend
 
 ---
 
@@ -22,7 +23,6 @@
 
 - Go **1.24+** → https://go.dev/dl/
 - Telegram API credentials → https://my.telegram.org/apps
-- (Optional) MongoDB instance
 
 ### 2. Clone & configure
 
@@ -37,14 +37,14 @@ Edit `.env`:
 ```env
 APP_ID=123456
 APP_HASH=your_app_hash_here
-MONGO_URL=mongodb://localhost:27017   # optional
-
-# Pick ONE:
-BOT_TOKEN=your_bot_token_here         # Bot mode (@BotFather)
-STRING_SESSION=                       # Userbot mode
+OWNER_ID=123456789          # Your Telegram user ID (@userinfobot)
+MONGO_URL=                  # Optional MongoDB URL
+BOT_TOKEN=your_bot_token    # Bot mode (@BotFather)
+STRING_SESSION=             # Userbot mode
 ```
 
-**Login priority:** `BOT_TOKEN` → `STRING_SESSION` → interactive prompt
+> **Login priority:** `BOT_TOKEN` → `STRING_SESSION` → interactive prompt
+> **Get your ID:** message @userinfobot on Telegram
 
 ### 3. Run
 
@@ -60,18 +60,18 @@ go run .
 ```
 PbxGo/
 ├── client/
-│   └── client.go        # Telegram client, filters, handler registration
+│   └── client.go        # Client init, OWNER_ID filter, handler registration
 ├── config/
-│   └── config.go        # .env loader (uses log/slog, os.LookupEnv)
+│   └── config.go        # .env loader — AppID, AppHash, OwnerID, BotToken, etc.
 ├── database/
 │   ├── db.go            # MongoDB v2 connection
-│   └── sudo.go          # Sudo CRUD (sync.Map + MongoDB)
+│   └── sudo.go          # Sudo CRUD — sync.Map + MongoDB
 ├── modules/
 │   ├── module.go        # Module/Command types + Register()
 │   ├── utils.go         # Reply() helper
-│   ├── start.go         # .alive, .ping
+│   ├── start.go         # .alive, .ping, /start (bot mode)
 │   └── sudo.go          # .addsudo, .rmsudo, .listsudo
-├── main.go              # Entry point
+├── main.go
 ├── go.mod               # Go 1.24
 └── sample.env
 ```
@@ -82,19 +82,21 @@ PbxGo/
 
 | Command | Description | Access |
 |--------|-------------|--------|
-| `.alive` | Show bot status & version | Owner / Sudo |
-| `.ping` | Ping with uptime | Owner / Sudo |
-| `.addsudo <id>` | Add sudo user (reply or ID) | Owner only |
+| `/start` | Welcome message (bot mode) | Everyone |
+| `.alive` | Bot status, uptime, version | Owner / Sudo |
+| `.ping` | Ping with speed & uptime | Owner / Sudo |
+| `.addsudo <id>` | Add sudo user | Owner only |
 | `.rmsudo <id>` | Remove sudo user | Owner only |
 | `.listsudo` | List all sudo users | Owner / Sudo |
+
+> ⚠️ All `.` commands are **OWNER_ID locked** — random users cannot trigger them.
 
 ---
 
 ## 🧩 Adding a New Module
 
-Create `modules/mymodule.go`:
-
 ```go
+// modules/hello.go
 package modules
 
 import "github.com/amarnathcjd/gogram/telegram"
@@ -106,16 +108,14 @@ func helloHandler(m *telegram.NewMessage) error {
 
 func init() {
     Register(ModuleInfo{
-        Name:        "MyModule",
+        Name:        "Hello",
         Description: "Says hello.",
         Commands: []CommandInfo{
-            {Pattern: "hello", Handler: helloHandler, Sudo: true},
+            {Pattern: "hello", Handler: helloHandler, Sudo: false},
         },
     })
 }
 ```
-
-That's it — no wiring needed. `init()` auto-registers it.
 
 ---
 

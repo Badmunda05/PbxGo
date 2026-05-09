@@ -46,7 +46,7 @@ func listSudoHandler(m *telegram.NewMessage) error {
 	return nil
 }
 
-// resolveUserID extracts a user ID from the command arg or replied message.
+// resolveUserID gets user ID from reply or command argument
 func resolveUserID(m *telegram.NewMessage) (int64, error) {
 	if m.IsReply() {
 		r, err := m.GetReplyMessage()
@@ -57,7 +57,7 @@ func resolveUserID(m *telegram.NewMessage) (int64, error) {
 	}
 	args := strings.Fields(m.Text())
 	if len(args) < 2 {
-		return 0, fmt.Errorf("no user id")
+		return 0, fmt.Errorf("no user id provided")
 	}
 	id, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
@@ -69,7 +69,7 @@ func resolveUserID(m *telegram.NewMessage) (int64, error) {
 func init() {
 	Register(ModuleInfo{
 		Name:        "Sudo",
-		Description: "Manage sudo users.",
+		Description: "Manage sudo users (owner only).",
 		Commands: []CommandInfo{
 			{Pattern: "addsudo", Handler: addSudoHandler, Sudo: false},
 			{Pattern: "rmsudo", Handler: rmSudoHandler, Sudo: false},
@@ -77,5 +77,3 @@ func init() {
 		},
 	})
 }
-
-var _ = telegram.HTML
