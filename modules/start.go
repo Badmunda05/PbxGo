@@ -16,7 +16,7 @@ func goVersion() string {
 	return runtime.Version()
 }
 
-func uptime() string {
+func uptimeStr() string {
 	d := time.Since(startTime).Round(time.Second)
 	h := int(d.Hours())
 	m := int(d.Minutes()) % 60
@@ -30,7 +30,7 @@ func uptime() string {
 	return fmt.Sprintf("%ds", s)
 }
 
-// aliveHandler — .alive command
+// .alive command
 func aliveHandler(m *telegram.NewMessage) error {
 	msg := fmt.Sprintf(
 		"** 🥀 ᴘʙxɢᴏ 💞 **\n\n"+
@@ -41,22 +41,24 @@ func aliveHandler(m *telegram.NewMessage) error {
 			"├• **ᴜᴘᴅᴀᴛᴇs**: [ᴘʙx_ᴜᴘᴅᴀᴛᴇ](https://t.me/PBX_UPDATE)\n"+
 			"└• **ᴏᴡɴᴇʀ**: [ʙᴀᴅ ᴍᴜɴᴅᴀ](https://t.me/Badmundaxd)",
 		version,
-		uptime(),
+		uptimeStr(),
 		goVersion(),
 	)
 	Reply(m, msg)
 	return nil
 }
 
-// pingHandler — .ping command
+// .ping command — measures actual round-trip speed
 func pingHandler(m *telegram.NewMessage) error {
 	start := time.Now()
+
+	// Send initial message to measure speed
 	sent, err := Reply(m, "🏓 ᴘɪɴɢɪɴɢ...")
 	if err != nil || sent == nil {
 		return err
 	}
-	duration := time.Since(start).Milliseconds()
 
+	duration := time.Since(start).Milliseconds()
 	me := m.Client.Me()
 	mention := fmt.Sprintf("<a href=\"tg://user?id=%d\">%s</a>", me.ID, me.FirstName)
 
@@ -66,7 +68,7 @@ func pingHandler(m *telegram.NewMessage) error {
 			"├• **╰☞ 𝐔ᴘᴛɪᴍᴇ** `%s`\n"+
 			"└• **╰☞ 𝐍ᴀᴍᴇ:** %s",
 		duration,
-		uptime(),
+		uptimeStr(),
 		mention,
 	)
 
@@ -74,7 +76,7 @@ func pingHandler(m *telegram.NewMessage) error {
 	return nil
 }
 
-// StartBotHandler — /start command (bot mode, public — no owner filter)
+// StartBotHandler — /start command, public (no owner filter)
 func StartBotHandler(m *telegram.NewMessage) error {
 	msg := "✨ 𝗛ᴇʏ 𝗧ʜᴇʀᴇ..! 👋\n\n" +
 		"ɪ'ᴍ <b>ᴘʙxɢᴏ</b> — ᴀ ꜰᴀsᴛ &amp; ᴘᴏᴡᴇʀꜰᴜʟ ɢᴏ ᴜsᴇʀʙᴏᴛ ⚡\n\n" +
@@ -94,7 +96,7 @@ func StartBotHandler(m *telegram.NewMessage) error {
 func init() {
 	Register(ModuleInfo{
 		Name:        "Core",
-		Description: "Basic health-check commands.",
+		Description: "alive, ping commands.",
 		Commands: []CommandInfo{
 			{Pattern: "alive", Handler: aliveHandler, Sudo: true},
 			{Pattern: "ping", Handler: pingHandler, Sudo: true},

@@ -121,4 +121,4 @@ func init() {
 
 ## 📄 License
 
-[MIT © PbxGo](https://github.com/Badmunda05/PbxGo/blob/main/LICENSE)
+MIT © PbxGo

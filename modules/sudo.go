@@ -46,7 +46,6 @@ func listSudoHandler(m *telegram.NewMessage) error {
 	return nil
 }
 
-// resolveUserID gets user ID from reply or command argument
 func resolveUserID(m *telegram.NewMessage) (int64, error) {
 	if m.IsReply() {
 		r, err := m.GetReplyMessage()
@@ -57,7 +56,7 @@ func resolveUserID(m *telegram.NewMessage) (int64, error) {
 	}
 	args := strings.Fields(m.Text())
 	if len(args) < 2 {
-		return 0, fmt.Errorf("no user id provided")
+		return 0, fmt.Errorf("no user id")
 	}
 	id, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {

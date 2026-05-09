@@ -9,7 +9,7 @@ type HandlerFunc = func(*telegram.NewMessage) error
 type CommandInfo struct {
 	Pattern string
 	Handler HandlerFunc
-	Sudo    bool // true = owner OR sudo users can run; false = owner only
+	Sudo    bool // true = owner + sudo can run; false = owner only
 }
 
 // ModuleInfo groups related commands under a named module.

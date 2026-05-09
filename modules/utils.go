@@ -4,7 +4,7 @@ import "github.com/amarnathcjd/gogram/telegram"
 
 // Reply sends a message.
 // Userbot mode: edits own message.
-// Bot mode: replies to the user's message.
+// Bot mode: replies to user.
 func Reply(m *telegram.NewMessage, text string) (*telegram.NewMessage, error) {
 	if m.SenderID() == m.Client.Me().ID {
 		return m.Edit(text, &telegram.SendOptions{ParseMode: telegram.HTML})

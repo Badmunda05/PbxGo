@@ -33,15 +33,8 @@ func Init() error {
 		},
 	}
 
-	switch {
-	case config.AppConfig.BotToken != "":
-		slog.Info("Starting in Bot mode (BOT_TOKEN)")
-		cfg.BotToken = config.AppConfig.BotToken
-	case config.AppConfig.StringSession != "":
-		slog.Info("Starting in Userbot mode (STRING_SESSION)")
+	if config.AppConfig.StringSession != "" {
 		cfg.StringSession = config.AppConfig.StringSession
-	default:
-		slog.Info("No session found — will prompt for login")
 	}
 
 	var err error
@@ -54,22 +47,54 @@ func Init() error {
 		return fmt.Errorf("connection failed: %w", err)
 	}
 
-	// Interactive login if no token/session
-	if config.AppConfig.BotToken == "" && config.AppConfig.StringSession == "" {
+	switch {
+	case config.AppConfig.BotToken != "":
+		slog.Info("Starting in Bot mode")
+		if err = Client.LoginBot(config.AppConfig.BotToken); err != nil {
+			return fmt.Errorf("bot login failed: %w", err)
+		}
+
+	case config.AppConfig.StringSession != "":
+		slog.Info("Starting in Userbot mode (string session)")
+		// session already loaded via cfg.StringSession above
+
+	default:
+		slog.Info("No session — prompting interactive login")
 		if err = Client.AuthPrompt(); err != nil {
 			return fmt.Errorf("auth failed: %w", err)
 		}
 		session := Client.ExportSession()
-		slog.Info("Login successful — save your string session below")
-		fmt.Println("\n--- STRING SESSION (copy to .env) ---")
+		fmt.Println("\n--- STRING SESSION (copy to .env as STRING_SESSION) ---")
 		fmt.Println(session)
-		fmt.Println("--------------------------------------\n")
+		fmt.Println("-------------------------------------------------------\n")
 	}
 
 	me := Client.Me()
-	OwnerID = config.AppConfig.OwnerID // always use .env OWNER_ID
-	slog.Info("Logged in", "name", me.FirstName, "username", me.Username, "id", me.ID, "owner_id", OwnerID)
+	OwnerID = config.AppConfig.OwnerID
+	slog.Info("Logged in",
+		"name", me.FirstName,
+		"username", me.Username,
+		"id", me.ID,
+		"owner_id", OwnerID,
+	)
 	return nil
+}
+
+// ownerFilter — sirf OWNER_ID wala command chala sakda hai
+func ownerFilter(m *telegram.NewMessage) error {
+	if m.SenderID() != config.AppConfig.OwnerID {
+		return fmt.Errorf("unauthorized")
+	}
+	return nil
+}
+
+// sudoOrOwnerFilter — owner ya sudo user command chala sakde ne
+func sudoOrOwnerFilter(m *telegram.NewMessage) error {
+	sid := m.SenderID()
+	if sid == config.AppConfig.OwnerID || database.IsSudo(sid) {
+		return nil
+	}
+	return fmt.Errorf("unauthorized")
 }
 
 func RegisterHandlers() {
@@ -77,22 +102,18 @@ func RegisterHandlers() {
 
 	for _, mod := range modules.RegisteredModules {
 		for _, cmd := range mod.Commands {
-			// All commands are owner-only by default
-			// Sudo: true = owner + sudo users; Sudo: false = owner only
-			var filter telegram.Filter
 			if cmd.Sudo {
-				filter = telegram.FilterFunc(isSudoOrOwner)
+				Client.On("cmd:"+cmd.Pattern, cmd.Handler, sudoOrOwnerFilter)
 			} else {
-				filter = telegram.FilterFunc(isOwner)
+				Client.On("cmd:"+cmd.Pattern, cmd.Handler, ownerFilter)
 			}
-			Client.On("cmd:"+cmd.Pattern, cmd.Handler, filter)
 		}
 		slog.Info("Module registered", "name", mod.Name, "commands", len(mod.Commands))
 	}
 
-	// /start command for bot mode (no filter — anyone can /start)
+	// /start — bot mode vich public (koi v user kar sakda)
 	if config.AppConfig.BotToken != "" {
-		Client.On("cmd:start", modules.StartBotHandler)
+		Client.On("message:/start", modules.StartBotHandler)
 	}
 }
 
@@ -107,19 +128,4 @@ func Run(ctx context.Context) {
 		os.Exit(0)
 	}()
 	Client.Idle()
-}
-
-// ── Filters ──────────────────────────────────────────────────────────────────
-
-// isOwner checks against OWNER_ID from config (not just logged-in account)
-func isOwner(m *telegram.NewMessage) bool {
-	return m.SenderID() == config.AppConfig.OwnerID
-}
-
-func isSudo(m *telegram.NewMessage) bool {
-	return database.IsSudo(m.SenderID())
-}
-
-func isSudoOrOwner(m *telegram.NewMessage) bool {
-	return isOwner(m) || isSudo(m)
 }
