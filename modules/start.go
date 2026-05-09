@@ -7,41 +7,33 @@ import (
 	"github.com/amarnathcjd/gogram/telegram"
 )
 
-var (
-	StartTime = time.Now()
-)
+var startTime = time.Now()
 
-func AliveHandler(m *telegram.NewMessage) error {
-	aliveMsg := "🤖 <b>PbxGo is alive and kicking!</b> 🔥\n\n"
-	aliveMsg += "Bot: <code>PbxGo</code>\n"
-	aliveMsg += "Status: <code>Active ✅</code>\n"
-	aliveMsg += "Framework: <code>gogram</code>"
-
-	EditOrReply(m, aliveMsg)
+func aliveHandler(m *telegram.NewMessage) error {
+	msg := "🤖 <b>PbxGo is alive!</b> 🔥\n\n" +
+		"📛 Bot: <code>PbxGo</code>\n" +
+		"⚙️  Version: <code>v2.0.0</code>\n" +
+		"📟 Status: <code>Online ✅</code>"
+	Reply(m, msg)
 	return nil
 }
 
-func PingHandler(m *telegram.NewMessage) error {
-	uptime := time.Since(StartTime)
-	EditOrReply(m, fmt.Sprintf("🏓 <b>Pong!</b>\n\n⏱ Uptime: <code>%v</code>", uptime))
+func pingHandler(m *telegram.NewMessage) error {
+	uptime := time.Since(startTime).Round(time.Second)
+	Reply(m, fmt.Sprintf("🏓 <b>Pong!</b>\n\n⏱ Uptime: <code>%s</code>", uptime))
 	return nil
 }
 
 func init() {
-	RegisterModule(ModuleInfo{
-		Name:        "Start Module",
-		Description: "Provides basic commands like alive and ping.",
+	Register(ModuleInfo{
+		Name:        "Core",
+		Description: "Basic health-check commands.",
 		Commands: []CommandInfo{
-			{
-				Pattern: "alive",
-				Func:    AliveHandler,
-				Sudo:    true,
-			},
-			{
-				Pattern: "ping",
-				Func:    PingHandler,
-				Sudo:    true,
-			},
+			{Pattern: "alive", Handler: aliveHandler, Sudo: true},
+			{Pattern: "ping", Handler: pingHandler, Sudo: true},
 		},
 	})
 }
+
+// Ensure telegram import is used (SendOptions used in utils.go)
+var _ = telegram.HTML

@@ -2,78 +2,84 @@ package database
 
 import (
 	"context"
-	"log"
+	"log/slog"
+	"sync"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-var SudoUsers = make(map[int64]bool)
+// sudoUsers uses sync.Map for safe concurrent access (Go 1.24 best practice)
+var sudoUsers sync.Map
+
+type sudoEntry struct {
+	UserID int64 `bson:"user_id"`
+}
 
 func LoadSudoUsers() {
-	if MongoClient == nil {
-		log.Println("⚠️  MongoDB not connected, sudo users will be in-memory only")
+	if !IsConnected() {
+		slog.Warn("MongoDB not connected — skipping sudo load")
 		return
 	}
 
 	ctx := context.Background()
-	cursor, err := SudoCollection.Find(ctx, bson.M{})
+	cursor, err := SudoCollection.Find(ctx, bson.D{})
 	if err != nil {
-		log.Printf("❌ Failed to load sudo users: %v", err)
+		slog.Error("Failed to fetch sudo users", "error", err)
 		return
 	}
 	defer cursor.Close(ctx)
 
+	count := 0
 	for cursor.Next(ctx) {
-		var result struct {
-			UserID int64 `bson:"user_id"`
-		}
-		err := cursor.Decode(&result)
-		if err != nil {
-			log.Printf("Failed to decode sudo user: %v", err)
+		var entry sudoEntry
+		if err := cursor.Decode(&entry); err != nil {
+			slog.Warn("Failed to decode sudo entry", "error", err)
 			continue
 		}
-		SudoUsers[result.UserID] = true
+		sudoUsers.Store(entry.UserID, true)
+		count++
 	}
 
-	if err := cursor.Err(); err != nil {
-		log.Printf("Cursor error: %v", err)
-	}
-
-	log.Printf("✅ Loaded %d sudo users from database", len(SudoUsers))
+	slog.Info("Sudo users loaded", "count", count)
 }
 
 func AddSudo(userID int64) {
-	SudoUsers[userID] = true
+	sudoUsers.Store(userID, true)
 
-	if MongoClient != nil {
+	if IsConnected() {
 		ctx := context.Background()
-		_, err := SudoCollection.InsertOne(ctx, bson.M{"user_id": userID})
-		if err != nil {
-			log.Printf("Failed to add sudo user to database: %v", err)
+		// Upsert to avoid duplicate key errors
+		filter := bson.D{{Key: "user_id", Value: userID}}
+		update := bson.D{{Key: "$setOnInsert", Value: bson.D{{Key: "user_id", Value: userID}}}}
+		opts := options.UpdateOne().SetUpsert(true)
+		if _, err := SudoCollection.UpdateOne(ctx, filter, update, opts); err != nil {
+			slog.Error("Failed to persist sudo add", "user_id", userID, "error", err)
 		}
 	}
 }
 
 func RemoveSudo(userID int64) {
-	delete(SudoUsers, userID)
+	sudoUsers.Delete(userID)
 
-	if MongoClient != nil {
+	if IsConnected() {
 		ctx := context.Background()
-		_, err := SudoCollection.DeleteOne(ctx, bson.M{"user_id": userID})
-		if err != nil {
-			log.Printf("Failed to remove sudo user from database: %v", err)
+		if _, err := SudoCollection.DeleteOne(ctx, bson.D{{Key: "user_id", Value: userID}}); err != nil {
+			slog.Error("Failed to persist sudo remove", "user_id", userID, "error", err)
 		}
 	}
 }
 
 func FetchSudoList() []int64 {
 	var list []int64
-	for userID := range SudoUsers {
-		list = append(list, userID)
-	}
+	sudoUsers.Range(func(key, _ any) bool {
+		list = append(list, key.(int64))
+		return true
+	})
 	return list
 }
 
 func IsSudo(userID int64) bool {
-	return SudoUsers[userID]
+	_, ok := sudoUsers.Load(userID)
+	return ok
 }

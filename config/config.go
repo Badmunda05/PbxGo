@@ -1,9 +1,9 @@
 package config
 
 import (
-	"fmt"
-	"log"
+	"log/slog"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -16,71 +16,42 @@ type Config struct {
 	BotToken      string
 }
 
-var AppConfig *Config
+var AppConfig Config
 
-func init() {
-
-	// ─── Load .env ───────────────────────────
-
-	err := godotenv.Load()
-
-	if err != nil {
-		log.Println("No .env file found, using system environment variables")
+func Load() {
+	if err := godotenv.Load(); err != nil {
+		slog.Warn("No .env file found, falling back to environment variables")
 	}
 
-	// ─── Config Init ─────────────────────────
+	appID, err := strconv.ParseInt(mustGetEnv("APP_ID"), 10, 32)
+	if err != nil {
+		slog.Error("Invalid APP_ID", "error", err)
+		os.Exit(1)
+	}
 
-	AppConfig = &Config{
-		AppID:         toInt32(getEnv("APP_ID", "0")),
-		AppHash:       getEnv("APP_HASH", ""),
+	AppConfig = Config{
+		AppID:         int32(appID),
+		AppHash:       mustGetEnv("APP_HASH"),
 		MongoURL:      getEnv("MONGO_URL", ""),
 		StringSession: getEnv("STRING_SESSION", ""),
 		BotToken:      getEnv("BOT_TOKEN", ""),
 	}
 
-	// ─── Validation ──────────────────────────
-
-	if AppConfig.AppID == 0 {
-		log.Fatal("APP_ID is missing")
-	}
-
-	if AppConfig.AppHash == "" {
-		log.Fatal("APP_HASH is missing")
-	}
-
-	if AppConfig.BotToken == "" {
-		log.Fatal("BOT_TOKEN is missing")
-	}
+	slog.Info("Config loaded successfully")
 }
 
-// ─────────────────────────────────────────────
-// Get ENV
-// ─────────────────────────────────────────────
-
-func getEnv(key string, defaultVal string) string {
-
-	value := os.Getenv(key)
-
-	if value == "" {
-		return defaultVal
+func getEnv(key, fallback string) string {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
 	}
-
-	return value
+	return fallback
 }
 
-// ─────────────────────────────────────────────
-// String → int32
-// ─────────────────────────────────────────────
-
-func toInt32(s string) int32 {
-
-	var i int32
-
-	_, err := fmt.Sscanf(s, "%d", &i)
-
-	if err != nil {
-		return 0
+func mustGetEnv(key string) string {
+	v, ok := os.LookupEnv(key)
+	if !ok || v == "" {
+		slog.Error("Required environment variable not set", "key", key)
+		os.Exit(1)
 	}
-
-	return i
+	return v
 }

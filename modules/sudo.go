@@ -2,108 +2,80 @@ package modules
 
 import (
 	"fmt"
-	"main/database"
+	"pbxgo/database"
 	"strconv"
 	"strings"
 
 	"github.com/amarnathcjd/gogram/telegram"
 )
 
-func AddSudoHandler(m *telegram.NewMessage) error {
-	args := strings.Fields(m.Text())
-	if len(args) < 2 && !m.IsReply() {
-		EditOrReply(m, "⚠️ Usage: <code>.addsudo &lt;user_id&gt;</code>")
+func addSudoHandler(m *telegram.NewMessage) error {
+	userID, err := resolveUserID(m)
+	if err != nil {
+		Reply(m, "⚠️ Usage: <code>.addsudo &lt;user_id&gt;</code> or reply to a user")
 		return nil
 	}
-
-	var userID int64
-	if m.IsReply() {
-		r, err := m.GetReplyMessage()
-		if err != nil {
-			EditOrReply(m, "❌ Failed to get replied message.")
-			return nil
-		}
-		userID = r.SenderID()
-	} else {
-		userIDStr := args[1]
-		userIDx, err := strconv.ParseInt(userIDStr, 10, 64)
-		if err != nil {
-			EditOrReply(m, "❌ Invalid user ID.")
-			return nil
-		}
-		userID = userIDx
-	}
-
 	database.AddSudo(userID)
-	EditOrReply(m, fmt.Sprintf("✅ User <code>%d</code> added to sudo list.", userID))
+	Reply(m, fmt.Sprintf("✅ User <code>%d</code> added to sudo list.", userID))
 	return nil
 }
 
-func RemoveSudoHandler(m *telegram.NewMessage) error {
-	args := strings.Fields(m.Text())
-	if len(args) < 2 && !m.IsReply() {
-		EditOrReply(m, "⚠️ Usage: <code>.rmsudo &lt;user_id&gt;</code>")
+func rmSudoHandler(m *telegram.NewMessage) error {
+	userID, err := resolveUserID(m)
+	if err != nil {
+		Reply(m, "⚠️ Usage: <code>.rmsudo &lt;user_id&gt;</code> or reply to a user")
 		return nil
 	}
+	database.RemoveSudo(userID)
+	Reply(m, fmt.Sprintf("✅ User <code>%d</code> removed from sudo list.", userID))
+	return nil
+}
 
-	var userID int64
+func listSudoHandler(m *telegram.NewMessage) error {
+	list := database.FetchSudoList()
+	if len(list) == 0 {
+		Reply(m, "📋 No sudo users found.")
+		return nil
+	}
+	var sb strings.Builder
+	sb.WriteString("👥 <b>Sudo Users:</b>\n")
+	for _, id := range list {
+		fmt.Fprintf(&sb, "• <code>%d</code>\n", id)
+	}
+	Reply(m, sb.String())
+	return nil
+}
+
+// resolveUserID extracts a user ID from the command arg or replied message.
+func resolveUserID(m *telegram.NewMessage) (int64, error) {
 	if m.IsReply() {
 		r, err := m.GetReplyMessage()
 		if err != nil {
-			EditOrReply(m, "❌ Failed to get replied message.")
-			return nil
+			return 0, err
 		}
-		userID = r.SenderID()
-	} else {
-		userIDStr := args[1]
-		userIDx, err := strconv.ParseInt(userIDStr, 10, 64)
-		if err != nil {
-			EditOrReply(m, "❌ Invalid user ID.")
-			return nil
-		}
-		userID = userIDx
+		return r.SenderID(), nil
 	}
-
-	database.RemoveSudo(userID)
-	EditOrReply(m, fmt.Sprintf("✅ User <code>%d</code> removed from sudo list.", userID))
-	return nil
-}
-
-func ListSudoHandler(m *telegram.NewMessage) error {
-	sudos := database.FetchSudoList()
-	if len(sudos) == 0 {
-		EditOrReply(m, "📋 No sudo users found.")
-		return nil
+	args := strings.Fields(m.Text())
+	if len(args) < 2 {
+		return 0, fmt.Errorf("no user id")
 	}
-
-	list := "👥 <b>Sudo Users:</b>\n"
-	for _, id := range sudos {
-		list += fmt.Sprintf("• <code>%d</code>\n", id)
+	id, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid id: %w", err)
 	}
-	EditOrReply(m, list)
-	return nil
+	return id, nil
 }
 
 func init() {
-	RegisterModule(ModuleInfo{
-		Name:        "Sudo Module",
-		Description: "Manages sudo users for PbxGo.",
+	Register(ModuleInfo{
+		Name:        "Sudo",
+		Description: "Manage sudo users.",
 		Commands: []CommandInfo{
-			{
-				Pattern: "addsudo",
-				Func:    AddSudoHandler,
-				Sudo:    false,
-			},
-			{
-				Pattern: "rmsudo",
-				Func:    RemoveSudoHandler,
-				Sudo:    false,
-			},
-			{
-				Pattern: "listsudo",
-				Func:    ListSudoHandler,
-				Sudo:    true,
-			},
+			{Pattern: "addsudo", Handler: addSudoHandler, Sudo: false},
+			{Pattern: "rmsudo", Handler: rmSudoHandler, Sudo: false},
+			{Pattern: "listsudo", Handler: listSudoHandler, Sudo: true},
 		},
 	})
 }
+
+var _ = telegram.HTML
