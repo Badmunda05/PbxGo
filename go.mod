@@ -1,6 +1,6 @@
 module main
 
-go 1.21
+go 1.24
 
 require (
 	github.com/amarnathcjd/gogram v1.6.7
