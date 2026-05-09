@@ -15,54 +15,99 @@ var (
 )
 
 func InitClient() error {
+
+	// ─── Init Database ───────────────────────
+
 	database.Init()
 	database.LoadSudoUsers()
+
+	// ─── Client Config ──────────────────────
 
 	cfg := telegram.ClientConfig{
 		AppID:    config.AppConfig.AppID,
 		AppHash:  config.AppConfig.AppHash,
 		LogLevel: telegram.LogInfo,
+
 		DeviceConfig: telegram.DeviceConfig{
 			DeviceModel:   "PbxGo Bot",
 			SystemVersion: "v2.0.0",
 		},
 	}
 
-	// Priority: BOT_TOKEN > STRING_SESSION > Auth Prompt
-	if config.AppConfig.BotToken != "" {
-		cfg.BotToken = config.AppConfig.BotToken
-	} else if config.AppConfig.StringSession != "" {
+	// ─── String Session ─────────────────────
+
+	if config.AppConfig.StringSession != "" {
 		cfg.StringSession = config.AppConfig.StringSession
 	}
 
-	var err error
-	Client, err = telegram.NewClient(cfg)
+	var (
+		err error
+	)
+
+	// ─── BOT MODE ───────────────────────────
+
+	if config.AppConfig.BotToken != "" {
+
+		Client, err = telegram.NewClient(
+			config.AppConfig.BotToken,
+			cfg,
+		)
+
+	} else {
+
+		// ─── USERBOT MODE ───────────────────
+
+		Client, err = telegram.NewClient(cfg)
+	}
+
 	if err != nil {
 		return err
 	}
 
+	// ─── Connect ────────────────────────────
+
 	Client.Conn()
 
-	// If neither BOT_TOKEN nor STRING_SESSION provided, prompt login
-	if config.AppConfig.BotToken == "" && config.AppConfig.StringSession == "" {
+	// ─── Auth Prompt (Userbot only) ─────────
+
+	if config.AppConfig.BotToken == "" &&
+		config.AppConfig.StringSession == "" {
+
 		if err := Client.AuthPrompt(); err == nil {
+
 			fmt.Println("✅ Authentication successful!")
-			fmt.Println("📋 Your String Session (save this):")
+
+			fmt.Println("📋 Your String Session:")
+
 			fmt.Println(Client.ExportSession())
 		}
 	}
 
+	// ─── Logged User ────────────────────────
+
 	OwnerID = Client.Me().ID
-	fmt.Printf("✅ Logged in as: %s (ID: %d)\n", Client.Me().Username, OwnerID)
+
+	fmt.Printf(
+		"✅ Logged in as: %s (ID: %d)\n",
+		Client.Me().Username,
+		OwnerID,
+	)
+
 	return nil
 }
+
+// ─────────────────────────────────────────────
+// Filters
+// ─────────────────────────────────────────────
 
 func IsOwnerFilter(m *telegram.NewMessage) bool {
 	return m.SenderID() == m.Client.Me().ID
 }
 
 func IsSudoFilter(m *telegram.NewMessage) bool {
+
 	sender := m.SenderID()
+
 	return database.IsSudo(sender)
 }
 
@@ -70,17 +115,36 @@ func IsSudoOrOwnerFilter(m *telegram.NewMessage) bool {
 	return IsOwnerFilter(m) || IsSudoFilter(m)
 }
 
+// ─────────────────────────────────────────────
+// Register Handlers
+// ─────────────────────────────────────────────
+
 func RegisterHandlers() {
+
 	for _, module := range modules.RegisteredModules {
+
 		for _, command := range module.Commands {
+
 			var filter telegram.Filter
+
 			if command.Sudo {
-				filter = telegram.FilterFunc(IsSudoOrOwnerFilter)
+
+				filter = telegram.FilterFunc(
+					IsSudoOrOwnerFilter,
+				)
+
 			} else {
-				filter = telegram.FilterFunc(IsOwnerFilter)
+
+				filter = telegram.FilterFunc(
+					IsOwnerFilter,
+				)
 			}
 
-			Client.On("cmd:"+command.Pattern, command.Func, filter)
+			Client.On(
+				"cmd:"+command.Pattern,
+				command.Func,
+				filter,
+			)
 		}
 	}
 }
