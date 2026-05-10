@@ -7,7 +7,7 @@ import (
 	"github.com/amarnathcjd/gogram/telegram"
 )
 
-// .del — replied message delete karo
+// .del
 func delHandler(m *telegram.NewMessage) error {
 
 	if m.IsReply() {
@@ -29,7 +29,7 @@ func delHandler(m *telegram.NewMessage) error {
 	return nil
 }
 
-// .purge — replied message se lekar current tak sab delete
+// .purge
 func purgeHandler(m *telegram.NewMessage) error {
 
 	if !m.IsReply() {
@@ -100,7 +100,7 @@ func purgeHandler(m *telegram.NewMessage) error {
 	return nil
 }
 
-// .purgeme [n] — apne last n messages delete karo
+// .purgeme [n]
 func purgeMeHandler(m *telegram.NewMessage) error {
 
 	args := GetArgs(m)
@@ -116,10 +116,11 @@ func purgeMeHandler(m *telegram.NewMessage) error {
 		return nil
 	}
 
-	history, err := m.Client.GetMessages(
+	// old gogram syntax
+	history, err := m.Client.GetHistory(
 		m.ChatID(),
-		&telegram.MessagesOptions{
-			Limit: n * 3,
+		&telegram.HistoryOptions{
+			Limit: int(n * 3),
 		},
 	)
 
