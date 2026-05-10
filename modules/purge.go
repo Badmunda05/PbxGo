@@ -116,36 +116,21 @@ func purgeMeHandler(m *telegram.NewMessage) error {
 		return nil
 	}
 
-	// old gogram syntax
-	history, err := m.Client.GetHistory(
-		m.ChatID(),
-		&telegram.HistoryOptions{
-			Limit: int(n * 3),
-		},
-	)
-
-	if err != nil || len(history) == 0 {
-		Reply(m, "❌ No messages found.")
-		return nil
-	}
-
-	myID := m.Client.Me().ID
-
+	// Simplified purgeMe for old gogram
 	var ids []int32
 
-	for _, msg := range history {
+	start := int32(m.ID) - n
 
-		if int32(len(ids)) >= n {
-			break
-		}
+	if start < 1 {
+		start = 1
+	}
 
-		if msg.SenderID() == myID {
-			ids = append(ids, int32(msg.ID))
-		}
+	for i := start; i <= int32(m.ID); i++ {
+		ids = append(ids, i)
 	}
 
 	if len(ids) == 0 {
-		Reply(m, "❌ No own messages found.")
+		Reply(m, "❌ No messages found.")
 		return nil
 	}
 
