@@ -7,8 +7,9 @@ import (
 	"github.com/amarnathcjd/gogram/telegram"
 )
 
-// .gcast — sab groups/channels vich broadcast
+// .gcast
 func gcastHandler(m *telegram.NewMessage) error {
+
 	text := GetArgs(m)
 	hasReply := m.IsReply()
 
@@ -17,11 +18,13 @@ func gcastHandler(m *telegram.NewMessage) error {
 		return nil
 	}
 
-	status, _ := Reply(m, "`📢 Starting broadcast to groups...`")
+	status, _ := Reply(m, "`📢 Starting broadcast...`")
 
-	dialogs, err := m.Client.GetDialogs(&telegram.DialogOptions{
-		Limit: 500,
-	})
+	dialogs, err := m.Client.GetDialogs(
+		&telegram.DialogOptions{
+			Limit: 500,
+		},
+	)
 
 	if err != nil {
 		status.Edit("`❌ Failed to get dialogs.`", nil)
@@ -38,12 +41,6 @@ func gcastHandler(m *telegram.NewMessage) error {
 	failed := 0
 
 	for _, dialog := range dialogs {
-
-		dtype := dialog.DialogClassName()
-
-		if dtype != "group" && dtype != "channel" && dtype != "supergroup" {
-			continue
-		}
 
 		chatID := dialog.GetID()
 
@@ -87,14 +84,17 @@ func gcastHandler(m *telegram.NewMessage) error {
 		failed,
 	)
 
-	status.Edit(msg, &telegram.SendOptions{
-		ParseMode: telegram.HTML,
-	})
+	status.Edit(
+		msg,
+		&telegram.SendOptions{
+			ParseMode: telegram.HTML,
+		},
+	)
 
 	return nil
 }
 
-// .gucast — sab private users vich broadcast
+// .gucast
 func gucastHandler(m *telegram.NewMessage) error {
 
 	text := GetArgs(m)
@@ -105,11 +105,13 @@ func gucastHandler(m *telegram.NewMessage) error {
 		return nil
 	}
 
-	status, _ := Reply(m, "`📢 Starting broadcast to private chats...`")
+	status, _ := Reply(m, "`📢 Starting private broadcast...`")
 
-	dialogs, err := m.Client.GetDialogs(&telegram.DialogOptions{
-		Limit: 500,
-	})
+	dialogs, err := m.Client.GetDialogs(
+		&telegram.DialogOptions{
+			Limit: 500,
+		},
+	)
 
 	if err != nil {
 		status.Edit("`❌ Failed to get dialogs.`", nil)
@@ -126,10 +128,6 @@ func gucastHandler(m *telegram.NewMessage) error {
 	failed := 0
 
 	for _, dialog := range dialogs {
-
-		if dialog.DialogClassName() != "user" {
-			continue
-		}
 
 		chatID := dialog.GetID()
 
@@ -173,17 +171,21 @@ func gucastHandler(m *telegram.NewMessage) error {
 		failed,
 	)
 
-	status.Edit(msg, &telegram.SendOptions{
-		ParseMode: telegram.HTML,
-	})
+	status.Edit(
+		msg,
+		&telegram.SendOptions{
+			ParseMode: telegram.HTML,
+		},
+	)
 
 	return nil
 }
 
 func init() {
+
 	Register(ModuleInfo{
 		Name:        "Broadcast",
-		Description: "Broadcast to groups or private chats",
+		Description: "Broadcast messages",
 		Commands: []CommandInfo{
 			{
 				Pattern: "gcast",
