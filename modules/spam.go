@@ -30,7 +30,7 @@ func spamHandler(m *telegram.NewMessage) error {
 
 	text := parts[1]
 
-	_ = m.Delete()
+	_, _ = m.Delete()
 
 	for i := 0; i < count; i++ {
 
@@ -74,7 +74,7 @@ func delaySpamHandler(m *telegram.NewMessage) error {
 
 	delay := time.Duration(delaySec * float64(time.Second))
 
-	_ = m.Delete()
+	_, _ = m.Delete()
 
 	for i := 0; i < count; i++ {
 
@@ -125,7 +125,7 @@ func stickerSpamHandler(m *telegram.NewMessage) error {
 		return nil
 	}
 
-	_ = m.Delete()
+	_, _ = m.Delete()
 
 	for i := 0; i < count; i++ {
 
