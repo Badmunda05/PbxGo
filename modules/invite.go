@@ -52,8 +52,8 @@ func inviteAllHandler(m *telegram.NewMessage) error {
 			continue
 		}
 
-		// old gogram compatible
-		_, err := m.Client.InviteToChannel(
+		// old gogram compatible add user
+		_, err := m.Client.AddUsers(
 			m.ChatID(),
 			[]int64{member.User.ID},
 		)
