@@ -4,23 +4,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/amarnathcjd/gogram/telegram"
 )
 
-const originalDataFile = "original_profile.json"
+const backupFile = "pbxgo_profile_backup.json"
 
 type profileBackup struct {
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
-	Bio        string `json:"bio"`
-	Username   string `json:"username"`
-	PhotoPaths []string `json:"photos"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
 }
 
 func loadBackup() map[string]profileBackup {
 	data := make(map[string]profileBackup)
-	if b, err := os.ReadFile(originalDataFile); err == nil {
+	if b, err := os.ReadFile(backupFile); err == nil {
 		_ = json.Unmarshal(b, &data)
 	}
 	return data
@@ -28,15 +26,14 @@ func loadBackup() map[string]profileBackup {
 
 func saveBackup(data map[string]profileBackup) {
 	b, _ := json.MarshalIndent(data, "", "  ")
-	_ = os.WriteFile(originalDataFile, b, 0644)
+	_ = os.WriteFile(backupFile, b, 0644)
 }
 
-// .clone [username/reply]
+// .clone [@username / reply]
 func cloneHandler(m *telegram.NewMessage) error {
-	op, _ := Reply(m, "`🔍 Processing...`")
+	op, _ := Reply(m, "`🔍 Fetching user info...`")
 
-	args := GetArgs(m)
-	var targetID int64
+	var targetUser *telegram.UserObj
 
 	if m.IsReply() {
 		r, err := m.GetReplyMessage()
@@ -44,61 +41,58 @@ func cloneHandler(m *telegram.NewMessage) error {
 			op.Edit("`❌ Could not get replied message.`", nil)
 			return nil
 		}
-		targetID = r.SenderID()
-	} else if args != "" {
-		user, err := m.Client.GetUser(args)
+		u, err := m.Client.GetUser(r.SenderID())
+		if err != nil {
+			op.Edit("`❌ Could not fetch sender info.`", nil)
+			return nil
+		}
+		targetUser = u
+	} else {
+		args := GetArgs(m)
+		if args == "" {
+			op.Edit("`⚠️ Usage: .clone @username or reply to a user`", nil)
+			return nil
+		}
+		// Strip @ if present
+		args = strings.TrimPrefix(args, "@")
+		u, err := m.Client.GetUser(args)
 		if err != nil {
 			op.Edit("`❌ User not found.`", nil)
 			return nil
 		}
-		targetID = user.ID
-	} else {
-		op.Edit("`⚠️ Usage: .clone @username or reply to a user`", nil)
-		return nil
+		targetUser = u
 	}
 
 	me := m.Client.Me()
 	myID := fmt.Sprintf("%d", me.ID)
 
-	// Backup if not done yet
+	// Backup original profile once
 	backups := loadBackup()
 	if _, exists := backups[myID]; !exists {
-		op.Edit("`📦 Backing up your profile...`", nil)
-		backup := profileBackup{
+		op.Edit("`📦 Backing up your original profile...`", nil)
+		backups[myID] = profileBackup{
 			FirstName: me.FirstName,
 			LastName:  me.LastName,
-			Username:  me.Username,
 		}
-		backups[myID] = backup
 		saveBackup(backups)
 	}
 
-	// Get target user info
-	targetUser, err := m.Client.GetUser(targetID)
+	op.Edit("`✏️ Cloning profile...`", nil)
+
+	// Update name via accounts.UpdateProfile
+	_, err := m.Client.UpdateProfile(targetUser.FirstName, targetUser.LastName, "")
 	if err != nil {
-		op.Edit("`❌ Could not fetch target user.`", nil)
+		op.Edit(fmt.Sprintf("`❌ Failed to update profile: %s`", err.Error()), nil)
 		return nil
 	}
 
-	op.Edit("`✏️ Updating profile...`", nil)
-
-	// Update name & bio
-	_ = m.Client.UpdateProfile(&telegram.UpdateProfileParams{
-		FirstName: targetUser.FirstName,
-		LastName:  targetUser.LastName,
-	})
-
-	op.Edit(
-		fmt.Sprintf(
-			"**✅ Cloned Successfully!**\n\n"+
-				"**👤 Name:** `%s %s`\n"+
-				"**🔗 Username:** `@%s`\n\n"+
-				"_Your original data is safely backed up!_",
-			targetUser.FirstName, targetUser.LastName,
-			targetUser.Username,
-		),
-		&telegram.SendOptions{ParseMode: telegram.Markdown},
-	)
+	op.Edit(fmt.Sprintf(
+		"**✅ Clone Successful!**\n\n"+
+			"**👤 Name:** `%s %s`\n"+
+			"**🔗 Username:** `@%s`\n\n"+
+			"_Your original profile is backed up. Use_ `.revert` _to restore._",
+		targetUser.FirstName, targetUser.LastName, targetUser.Username,
+	), &telegram.SendOptions{ParseMode: telegram.MarkDown})
 	return nil
 }
 
@@ -112,28 +106,25 @@ func revertHandler(m *telegram.NewMessage) error {
 
 	orig, exists := backups[myID]
 	if !exists {
-		op.Edit("`⚠️ No backup found!`", nil)
+		op.Edit("`⚠️ No backup found! Clone first with .clone`", nil)
 		return nil
 	}
 
-	_ = m.Client.UpdateProfile(&telegram.UpdateProfileParams{
-		FirstName: orig.FirstName,
-		LastName:  orig.LastName,
-	})
+	_, err := m.Client.UpdateProfile(orig.FirstName, orig.LastName, "")
+	if err != nil {
+		op.Edit(fmt.Sprintf("`❌ Failed to revert: %s`", err.Error()), nil)
+		return nil
+	}
 
 	delete(backups, myID)
 	saveBackup(backups)
 
-	op.Edit(
-		fmt.Sprintf(
-			"**✅ Reverted Successfully!**\n\n"+
-				"**👤 Name:** `%s %s`\n"+
-				"**🔗 Username:** `@%s`\n\n"+
-				"_✨ Backup cleaned!_",
-			orig.FirstName, orig.LastName, orig.Username,
-		),
-		&telegram.SendOptions{ParseMode: telegram.Markdown},
-	)
+	op.Edit(fmt.Sprintf(
+		"**✅ Reverted Successfully!**\n\n"+
+			"**👤 Name:** `%s %s`\n\n"+
+			"_Backup cleared. You're back to original!_",
+		orig.FirstName, orig.LastName,
+	), &telegram.SendOptions{ParseMode: telegram.MarkDown})
 	return nil
 }
 

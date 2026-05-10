@@ -72,15 +72,21 @@ func stickerSpamHandler(m *telegram.NewMessage) error {
 	}
 
 	r, err := m.GetReplyMessage()
-	if err != nil || r.Sticker() == nil {
+	if err != nil {
+		Reply(m, "❌ Could not get replied message.")
+		return nil
+	}
+
+	// Get sticker document from replied message
+	media := r.Media()
+	if media == nil {
 		Reply(m, "↩️ Reply to a sticker.")
 		return nil
 	}
 
-	sticker := r.Sticker()
 	m.Delete()
 	for i := 0; i < count; i++ {
-		m.Client.SendMedia(m.ChatID(), sticker.FileID, &telegram.MediaOptions{})
+		m.Client.SendMedia(m.ChatID(), media, &telegram.MediaOptions{})
 		time.Sleep(100 * time.Millisecond)
 	}
 	return nil

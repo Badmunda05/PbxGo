@@ -37,14 +37,14 @@ func purgeHandler(m *telegram.NewMessage) error {
 		ids = append(ids, i)
 	}
 
-	// Batches of 100
 	count := 0
 	for len(ids) > 0 {
-		batch := ids
-		if len(batch) > 100 {
-			batch = ids[:100]
+		batchSize := 100
+		if len(ids) < batchSize {
+			batchSize = len(ids)
 		}
-		ids = ids[len(batch):]
+		batch := ids[:batchSize]
+		ids = ids[batchSize:]
 		_, err := m.Client.DeleteMessages(m.ChatID(), batch, nil)
 		if err == nil {
 			count += len(batch)
@@ -53,8 +53,10 @@ func purgeHandler(m *telegram.NewMessage) error {
 	}
 
 	if ex != nil {
-		done, _ := ex.Edit(fmt.Sprintf("✅ <b>Purge complete!</b> Deleted <code>%d</code> messages.", count),
-			&telegram.SendOptions{ParseMode: telegram.HTML})
+		done, _ := ex.Edit(
+			fmt.Sprintf("✅ <b>Purge done!</b> Deleted <code>%d</code> messages.", count),
+			&telegram.SendOptions{ParseMode: telegram.HTML},
+		)
 		if done != nil {
 			time.Sleep(2 * time.Second)
 			done.Delete()
@@ -66,32 +68,40 @@ func purgeHandler(m *telegram.NewMessage) error {
 // .purgeme [n] — apne last n messages delete karo
 func purgeMeHandler(m *telegram.NewMessage) error {
 	args := GetArgs(m)
-	if args == "" {
-		m.Delete()
-		return nil
+	var n int32 = 10
+	if args != "" {
+		fmt.Sscanf(args, "%d", &n)
 	}
-	var n int
-	fmt.Sscanf(args, "%d", &n)
-	if n < 1 {
-		Reply(m, "⚠️ Usage: <code>.purgeme 10</code>")
+	if n < 1 || n > 100 {
+		Reply(m, "⚠️ Count must be between 1 and 100.")
 		return nil
 	}
 
-	// Search own messages
-	msgs, err := m.Client.SearchMessages(m.ChatID(), &telegram.SearchOptions{
-		Query:  "",
-		Limit:  int32(n + 1),
-		FromID: m.Client.Me().ID,
+	// Get message history and filter own messages
+	history, err := m.Client.GetMessages(m.ChatID(), &telegram.MessagesOptions{
+		Limit: n * 3, // fetch more to find own msgs
 	})
-	if err != nil || len(msgs) == 0 {
+	if err != nil || len(history) == 0 {
 		Reply(m, "❌ No messages found.")
 		return nil
 	}
 
+	myID := m.Client.Me().ID
 	var ids []int32
-	for _, msg := range msgs {
-		ids = append(ids, int32(msg.ID))
+	for _, msg := range history {
+		if int32(len(ids)) >= n {
+			break
+		}
+		if msg.SenderID() == myID {
+			ids = append(ids, int32(msg.ID))
+		}
 	}
+
+	if len(ids) == 0 {
+		Reply(m, "❌ No own messages found.")
+		return nil
+	}
+
 	m.Client.DeleteMessages(m.ChatID(), ids, nil)
 	return nil
 }

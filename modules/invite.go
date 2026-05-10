@@ -17,8 +17,9 @@ func inviteAllHandler(m *telegram.NewMessage) error {
 
 	status, _ := Reply(m, "`👥 Fetching members...`")
 
-	members, err := m.Client.GetChatMembers(args, &telegram.GetChatMembersParams{
-		Limit: 200,
+	members, _, err := m.Client.GetChatMembers(args, &telegram.ParticipantOptions{
+		Filter: &telegram.ChannelParticipantsRecent{},
+		Limit:  200,
 	})
 	if err != nil {
 		status.Edit("`❌ Failed to get members from that group.`", nil)
@@ -29,11 +30,10 @@ func inviteAllHandler(m *telegram.NewMessage) error {
 	done, failed := 0, 0
 
 	for _, member := range members {
-		user := member.GetUser()
-		if user == nil || user.Bot {
+		if member.User == nil || member.User.Bot {
 			continue
 		}
-		err := m.Client.AddChatMembers(m.ChatID(), []int64{user.ID})
+		err := m.Client.AddChatMembers(m.ChatID(), []int64{member.User.ID})
 		if err != nil {
 			failed++
 		} else {

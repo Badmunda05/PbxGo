@@ -7,7 +7,7 @@ import (
 	"github.com/amarnathcjd/gogram/telegram"
 )
 
-// .gcast — sab groups vich broadcast
+// .gcast — sab groups/channels vich broadcast
 func gcastHandler(m *telegram.NewMessage) error {
 	text := GetArgs(m)
 	hasReply := m.IsReply()
@@ -16,12 +16,11 @@ func gcastHandler(m *telegram.NewMessage) error {
 		return nil
 	}
 
-	status, _ := Reply(m, "`📢 Starting global broadcast to groups...`")
-	done, failed := 0, 0
+	status, _ := Reply(m, "`📢 Starting broadcast to groups...`")
 
-	dialogs, err := m.Client.GetDialogs(nil)
+	dialogs, err := m.Client.GetDialogs(&telegram.DialogOptions{Limit: 500})
 	if err != nil {
-		Reply(m, "❌ Failed to get dialogs.")
+		status.Edit("`❌ Failed to get dialogs.`", nil)
 		return nil
 	}
 
@@ -30,25 +29,18 @@ func gcastHandler(m *telegram.NewMessage) error {
 		replyMsg, _ = m.GetReplyMessage()
 	}
 
-	for _, d := range dialogs {
-		chat := d.GetChat()
-		if chat == nil {
+	done, failed := 0, 0
+	for _, dialog := range dialogs {
+		dtype := dialog.GetType()
+		if dtype != "group" && dtype != "channel" && dtype != "supergroup" {
 			continue
 		}
-		peer := chat.GetPeer()
-		if peer == nil {
-			continue
-		}
-		_, isGroup := peer.(*telegram.InputPeerChannel)
-		_, isChat := peer.(*telegram.InputPeerChat)
-		if !isGroup && !isChat {
-			continue
-		}
+		chatID := dialog.GetID()
 		var err error
 		if replyMsg != nil {
-			_, err = replyMsg.Copy(chat.GetID(), nil)
+			_, err = m.Client.ForwardMessage(chatID, m.ChatID(), []int32{int32(replyMsg.ID)})
 		} else {
-			_, err = m.Client.SendMessage(chat.GetID(), text, nil)
+			_, err = m.Client.SendMessage(chatID, text, &telegram.SendOptions{ParseMode: telegram.HTML})
 		}
 		if err != nil {
 			failed++
@@ -58,16 +50,15 @@ func gcastHandler(m *telegram.NewMessage) error {
 		time.Sleep(300 * time.Millisecond)
 	}
 
-	if status != nil {
-		status.Edit(
-			fmt.Sprintf("✅ <b>Broadcast done!</b>\n📤 Sent: <code>%d</code>\n❌ Failed: <code>%d</code>", done, failed),
-			&telegram.SendOptions{ParseMode: telegram.HTML},
-		)
-	}
+	msg := fmt.Sprintf(
+		"✅ <b>Broadcast done!</b>\n📤 Sent: <code>%d</code>\n❌ Failed: <code>%d</code>",
+		done, failed,
+	)
+	status.Edit(msg, &telegram.SendOptions{ParseMode: telegram.HTML})
 	return nil
 }
 
-// .gucast — sab private chats vich broadcast
+// .gucast — sab private users vich broadcast
 func gucastHandler(m *telegram.NewMessage) error {
 	text := GetArgs(m)
 	hasReply := m.IsReply()
@@ -76,12 +67,11 @@ func gucastHandler(m *telegram.NewMessage) error {
 		return nil
 	}
 
-	status, _ := Reply(m, "`📢 Starting global broadcast to private chats...`")
-	done, failed := 0, 0
+	status, _ := Reply(m, "`📢 Starting broadcast to private chats...`")
 
-	dialogs, err := m.Client.GetDialogs(nil)
+	dialogs, err := m.Client.GetDialogs(&telegram.DialogOptions{Limit: 500})
 	if err != nil {
-		Reply(m, "❌ Failed to get dialogs.")
+		status.Edit("`❌ Failed to get dialogs.`", nil)
 		return nil
 	}
 
@@ -90,24 +80,17 @@ func gucastHandler(m *telegram.NewMessage) error {
 		replyMsg, _ = m.GetReplyMessage()
 	}
 
-	for _, d := range dialogs {
-		chat := d.GetChat()
-		if chat == nil {
+	done, failed := 0, 0
+	for _, dialog := range dialogs {
+		if dialog.GetType() != "user" {
 			continue
 		}
-		peer := chat.GetPeer()
-		if peer == nil {
-			continue
-		}
-		_, isUser := peer.(*telegram.InputPeerUser)
-		if !isUser {
-			continue
-		}
+		chatID := dialog.GetID()
 		var err error
 		if replyMsg != nil {
-			_, err = replyMsg.Copy(chat.GetID(), nil)
+			_, err = m.Client.ForwardMessage(chatID, m.ChatID(), []int32{int32(replyMsg.ID)})
 		} else {
-			_, err = m.Client.SendMessage(chat.GetID(), text, nil)
+			_, err = m.Client.SendMessage(chatID, text, &telegram.SendOptions{ParseMode: telegram.HTML})
 		}
 		if err != nil {
 			failed++
@@ -117,12 +100,11 @@ func gucastHandler(m *telegram.NewMessage) error {
 		time.Sleep(300 * time.Millisecond)
 	}
 
-	if status != nil {
-		status.Edit(
-			fmt.Sprintf("✅ <b>Broadcast done!</b>\n📤 Sent: <code>%d</code>\n❌ Failed: <code>%d</code>", done, failed),
-			&telegram.SendOptions{ParseMode: telegram.HTML},
-		)
-	}
+	msg := fmt.Sprintf(
+		"✅ <b>Broadcast done!</b>\n📤 Sent: <code>%d</code>\n❌ Failed: <code>%d</code>",
+		done, failed,
+	)
+	status.Edit(msg, &telegram.SendOptions{ParseMode: telegram.HTML})
 	return nil
 }
 
