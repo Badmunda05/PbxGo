@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	Client  *telegram.Client
-	OwnerID int64
+	Client    *telegram.Client
+	OwnerID   int64
+	IsBotMode bool
 )
 
 func Init() error {
@@ -50,13 +51,16 @@ func Init() error {
 	switch {
 	case config.AppConfig.BotToken != "":
 		slog.Info("Starting in Bot mode")
+		IsBotMode = true
 		if err = Client.LoginBot(config.AppConfig.BotToken); err != nil {
 			return fmt.Errorf("bot login failed: %w", err)
 		}
 	case config.AppConfig.StringSession != "":
 		slog.Info("Starting in Userbot mode")
+		IsBotMode = false
 	default:
 		slog.Info("No session — prompting interactive login")
+		IsBotMode = false
 		if err = Client.AuthPrompt(); err != nil {
 			return fmt.Errorf("auth failed: %w", err)
 		}
@@ -67,23 +71,25 @@ func Init() error {
 
 	me := Client.Me()
 	OwnerID = config.AppConfig.OwnerID
-	slog.Info("Logged in", "name", me.FirstName, "id", me.ID, "owner_id", OwnerID)
+	slog.Info("Logged in", "name", me.FirstName, "id", me.ID, "owner_id", OwnerID, "bot_mode", IsBotMode)
 	return nil
 }
 
+// ownerFilter — only the OWNER_ID user can run this command (works in both bot and userbot mode)
 func ownerFilter(m *telegram.NewMessage) error {
 	if m.SenderID() != config.AppConfig.OwnerID {
-		return fmt.Errorf("unauthorized")
+		return fmt.Errorf("unauthorized: only owner can use this command")
 	}
 	return nil
 }
 
+// sudoOrOwnerFilter — owner or users in the sudo list can run this command
 func sudoOrOwnerFilter(m *telegram.NewMessage) error {
 	sid := m.SenderID()
 	if sid == config.AppConfig.OwnerID || database.IsSudo(sid) {
 		return nil
 	}
-	return fmt.Errorf("unauthorized")
+	return fmt.Errorf("unauthorized: owner or sudo only")
 }
 
 func RegisterHandlers() {
@@ -92,17 +98,21 @@ func RegisterHandlers() {
 	for _, mod := range modules.RegisteredModules {
 		for _, cmd := range mod.Commands {
 			if cmd.Sudo {
+				// Sudo: true — owner + sudo users can run
 				Client.On("cmd:"+cmd.Pattern, cmd.Handler, sudoOrOwnerFilter)
 			} else {
+				// Sudo: false — owner only
 				Client.On("cmd:"+cmd.Pattern, cmd.Handler, ownerFilter)
 			}
 		}
 		slog.Info("Module registered", "name", mod.Name, "commands", len(mod.Commands))
 	}
 
-	// /start — bot mode vich public
-	if config.AppConfig.BotToken != "" {
+	// /start — public in bot mode (anyone can use)
+	// Not registered in userbot mode
+	if IsBotMode {
 		Client.On("message:/start", modules.StartBotHandler)
+		slog.Info("Bot mode: /start handler registered (public)")
 	}
 }
 
