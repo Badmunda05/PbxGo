@@ -53,34 +53,24 @@ func Init() error {
 		if err = Client.LoginBot(config.AppConfig.BotToken); err != nil {
 			return fmt.Errorf("bot login failed: %w", err)
 		}
-
 	case config.AppConfig.StringSession != "":
-		slog.Info("Starting in Userbot mode (string session)")
-		// session already loaded via cfg.StringSession above
-
+		slog.Info("Starting in Userbot mode")
 	default:
 		slog.Info("No session — prompting interactive login")
 		if err = Client.AuthPrompt(); err != nil {
 			return fmt.Errorf("auth failed: %w", err)
 		}
-		session := Client.ExportSession()
-		fmt.Println("\n--- STRING SESSION (copy to .env as STRING_SESSION) ---")
-		fmt.Println(session)
-		fmt.Println("-------------------------------------------------------\n")
+		fmt.Println("\n--- STRING SESSION ---")
+		fmt.Println(Client.ExportSession())
+		fmt.Println("----------------------\n")
 	}
 
 	me := Client.Me()
 	OwnerID = config.AppConfig.OwnerID
-	slog.Info("Logged in",
-		"name", me.FirstName,
-		"username", me.Username,
-		"id", me.ID,
-		"owner_id", OwnerID,
-	)
+	slog.Info("Logged in", "name", me.FirstName, "id", me.ID, "owner_id", OwnerID)
 	return nil
 }
 
-// ownerFilter — sirf OWNER_ID wala command chala sakda hai
 func ownerFilter(m *telegram.NewMessage) error {
 	if m.SenderID() != config.AppConfig.OwnerID {
 		return fmt.Errorf("unauthorized")
@@ -88,7 +78,6 @@ func ownerFilter(m *telegram.NewMessage) error {
 	return nil
 }
 
-// sudoOrOwnerFilter — owner ya sudo user command chala sakde ne
 func sudoOrOwnerFilter(m *telegram.NewMessage) error {
 	sid := m.SenderID()
 	if sid == config.AppConfig.OwnerID || database.IsSudo(sid) {
@@ -111,7 +100,7 @@ func RegisterHandlers() {
 		slog.Info("Module registered", "name", mod.Name, "commands", len(mod.Commands))
 	}
 
-	// /start — bot mode vich public (koi v user kar sakda)
+	// /start — bot mode vich public
 	if config.AppConfig.BotToken != "" {
 		Client.On("message:/start", modules.StartBotHandler)
 	}

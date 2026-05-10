@@ -8,7 +8,7 @@ import (
 	"pbxgo/config"
 	"pbxgo/database"
 
-	_ "pbxgo/modules" // register all modules via init()
+	_ "pbxgo/modules"
 )
 
 func main() {

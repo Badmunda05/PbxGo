@@ -1,5 +1,8 @@
 .env
 *.db
 *.dat
+original_profile.json
+original_photo_*.jpg
+clone_temp_*.jpg
 PbxGo
 bin/

@@ -21,7 +21,7 @@ var AppConfig Config
 
 func Load() {
 	if err := godotenv.Load(); err != nil {
-		slog.Warn("No .env file found, falling back to environment variables")
+		slog.Warn("No .env file found, using environment variables")
 	}
 
 	appID, err := strconv.ParseInt(mustGetEnv("APP_ID"), 10, 32)
@@ -45,7 +45,7 @@ func Load() {
 		OwnerID:       ownerID,
 	}
 
-	slog.Info("Config loaded", "owner_id", AppConfig.OwnerID)
+	slog.Info("✅ Config loaded", "owner_id", AppConfig.OwnerID)
 }
 
 func getEnv(key, fallback string) string {
@@ -58,7 +58,7 @@ func getEnv(key, fallback string) string {
 func mustGetEnv(key string) string {
 	v, ok := os.LookupEnv(key)
 	if !ok || v == "" {
-		slog.Error("Required environment variable not set", "key", key)
+		slog.Error("Required env variable missing", "key", key)
 		os.Exit(1)
 	}
 	return v

@@ -6,49 +6,22 @@
 
 ## ✨ Features
 
-- ⚡ **Go 1.24** — `log/slog`, structured logging, modern stdlib
-- 🔐 **OWNER_ID** — all commands locked to owner only (no spam risk)
+- ⚡ **Go 1.24** — modern stdlib, `log/slog`, structured logging
+- 🔐 **OWNER_ID** — all `.` commands locked to owner only
 - 🤖 **Bot Token** support via `BOT_TOKEN`
 - 👤 **Userbot** support via `STRING_SESSION`
-- 👥 **Sudo Management** — `.addsudo`, `.rmsudo`, `.listsudo`
 - 🗄️ **MongoDB v2** — optional persistent sudo storage
-- 🔒 **Thread-safe** — `sync.Map` for concurrent access
 - 🧩 **Modular** — drop `.go` files in `modules/` to extend
 
 ---
 
 ## ⚙️ Setup
 
-### 1. Requirements
-
-- Go **1.24+** → https://go.dev/dl/
-- Telegram API credentials → https://my.telegram.org/apps
-
-### 2. Clone & configure
-
 ```bash
 git clone https://github.com/youruser/PbxGo.git
 cd PbxGo
 cp sample.env .env
-```
-
-Edit `.env`:
-
-```env
-APP_ID=123456
-APP_HASH=your_app_hash_here
-OWNER_ID=123456789          # Your Telegram user ID (@userinfobot)
-MONGO_URL=                  # Optional MongoDB URL
-BOT_TOKEN=your_bot_token    # Bot mode (@BotFather)
-STRING_SESSION=             # Userbot mode
-```
-
-> **Login priority:** `BOT_TOKEN` → `STRING_SESSION` → interactive prompt
-> **Get your ID:** message @userinfobot on Telegram
-
-### 3. Run
-
-```bash
+# Edit .env with your credentials
 go mod tidy
 go run .
 ```
@@ -59,20 +32,28 @@ go run .
 
 ```
 PbxGo/
-├── client/
-│   └── client.go        # Client init, OWNER_ID filter, handler registration
-├── config/
-│   └── config.go        # .env loader — AppID, AppHash, OwnerID, BotToken, etc.
+├── client/client.go       # Client init, OWNER_ID filter
+├── config/config.go       # .env loader
 ├── database/
-│   ├── db.go            # MongoDB v2 connection
-│   └── sudo.go          # Sudo CRUD — sync.Map + MongoDB
+│   ├── db.go              # MongoDB v2 connection
+│   └── sudo.go            # Sudo CRUD
 ├── modules/
-│   ├── module.go        # Module/Command types + Register()
-│   ├── utils.go         # Reply() helper
-│   ├── start.go         # .alive, .ping, /start (bot mode)
-│   └── sudo.go          # .addsudo, .rmsudo, .listsudo
+│   ├── module.go          # Module/Command types
+│   ├── utils.go           # Reply() helper
+│   ├── start.go           # .alive .ping /start
+│   ├── help.go            # .help
+│   ├── restart.go         # .restart .rs .reload
+│   ├── purge.go           # .del .purge .purgeme
+│   ├── spam.go            # .spam .delayspam .sspam
+│   ├── broadcast.go       # .gcast .gucast
+│   ├── clone.go           # .clone .revert
+│   ├── emoji.go           # .emoji .cmoji
+│   ├── hang.go            # .hang
+│   ├── tagger.go          # .all .cancel
+│   ├── invite.go          # .inviteall
+│   └── sudo.go            # .addsudo .rmsudo .sudolist
 ├── main.go
-├── go.mod               # Go 1.24
+├── go.mod
 └── sample.env
 ```
 
@@ -83,42 +64,32 @@ PbxGo/
 | Command | Description | Access |
 |--------|-------------|--------|
 | `/start` | Welcome message (bot mode) | Everyone |
-| `.alive` | Bot status, uptime, version | Owner / Sudo |
-| `.ping` | Ping with speed & uptime | Owner / Sudo |
-| `.addsudo <id>` | Add sudo user | Owner only |
-| `.rmsudo <id>` | Remove sudo user | Owner only |
-| `.listsudo` | List all sudo users | Owner / Sudo |
-
-> ⚠️ All `.` commands are **OWNER_ID locked** — random users cannot trigger them.
-
----
-
-## 🧩 Adding a New Module
-
-```go
-// modules/hello.go
-package modules
-
-import "github.com/amarnathcjd/gogram/telegram"
-
-func helloHandler(m *telegram.NewMessage) error {
-    Reply(m, "👋 Hello from <b>MyModule</b>!")
-    return nil
-}
-
-func init() {
-    Register(ModuleInfo{
-        Name:        "Hello",
-        Description: "Says hello.",
-        Commands: []CommandInfo{
-            {Pattern: "hello", Handler: helloHandler, Sudo: false},
-        },
-    })
-}
-```
+| `.alive` | Bot status & uptime | Owner/Sudo |
+| `.ping` | Speed check | Owner/Sudo |
+| `.help` | Full command list | Owner/Sudo |
+| `.restart` / `.rs` | Restart bot | Owner |
+| `.del` | Delete replied message | Owner |
+| `.purge` | Purge from replied msg | Owner |
+| `.purgeme [n]` | Delete your last n msgs | Owner |
+| `.spam [n] [text]` | Spam messages | Owner |
+| `.delayspam [s] [n] [text]` | Delayed spam | Owner |
+| `.sspam [n]` | Sticker spam (reply) | Owner |
+| `.gcast [text]` | Broadcast to groups | Owner |
+| `.gucast [text]` | Broadcast to private | Owner |
+| `.clone [@user]` | Clone a user's profile | Owner |
+| `.revert` | Revert your profile | Owner |
+| `.emoji [text]` | Text to emoji art | Owner |
+| `.cmoji [e] [text]` | Custom emoji art | Owner |
+| `.hang [n]` | Send hang messages | Owner |
+| `.all [text]` | Mention all members | Owner |
+| `.cancel` | Stop tagger | Owner |
+| `.inviteall [@grp]` | Invite members | Owner |
+| `.addsudo [id]` | Add sudo user | Owner |
+| `.rmsudo [id]` | Remove sudo user | Owner |
+| `.sudolist` | List sudo users | Owner/Sudo |
 
 ---
 
 ## 📄 License
 
-MIT © PbxGo
+MIT © PbxGo | Support: @PBXCHATS | Updates: @PBX_UPDATE

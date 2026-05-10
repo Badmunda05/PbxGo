@@ -10,7 +10,7 @@ import (
 )
 
 func addSudoHandler(m *telegram.NewMessage) error {
-	userID, err := resolveUserID(m)
+	userID, err := resolveUID(m)
 	if err != nil {
 		Reply(m, "⚠️ Usage: <code>.addsudo &lt;user_id&gt;</code> or reply to a user")
 		return nil
@@ -21,7 +21,7 @@ func addSudoHandler(m *telegram.NewMessage) error {
 }
 
 func rmSudoHandler(m *telegram.NewMessage) error {
-	userID, err := resolveUserID(m)
+	userID, err := resolveUID(m)
 	if err != nil {
 		Reply(m, "⚠️ Usage: <code>.rmsudo &lt;user_id&gt;</code> or reply to a user")
 		return nil
@@ -31,22 +31,23 @@ func rmSudoHandler(m *telegram.NewMessage) error {
 	return nil
 }
 
-func listSudoHandler(m *telegram.NewMessage) error {
+func sudoListHandler(m *telegram.NewMessage) error {
+	ex, _ := Reply(m, "`⏳ Processing...`")
 	list := database.FetchSudoList()
 	if len(list) == 0 {
-		Reply(m, "📋 No sudo users found.")
+		ex.Edit("📋 No sudo users found.", nil)
 		return nil
 	}
 	var sb strings.Builder
 	sb.WriteString("👥 <b>Sudo Users:</b>\n")
-	for _, id := range list {
-		fmt.Fprintf(&sb, "• <code>%d</code>\n", id)
+	for i, id := range list {
+		fmt.Fprintf(&sb, "%d. <code>%d</code>\n", i+1, id)
 	}
-	Reply(m, sb.String())
+	ex.Edit(sb.String(), &telegram.SendOptions{ParseMode: telegram.HTML})
 	return nil
 }
 
-func resolveUserID(m *telegram.NewMessage) (int64, error) {
+func resolveUID(m *telegram.NewMessage) (int64, error) {
 	if m.IsReply() {
 		r, err := m.GetReplyMessage()
 		if err != nil {
@@ -54,13 +55,13 @@ func resolveUserID(m *telegram.NewMessage) (int64, error) {
 		}
 		return r.SenderID(), nil
 	}
-	args := strings.Fields(m.Text())
-	if len(args) < 2 {
-		return 0, fmt.Errorf("no user id")
+	args := GetArgs(m)
+	if args == "" {
+		return 0, fmt.Errorf("no id")
 	}
-	id, err := strconv.ParseInt(args[1], 10, 64)
+	id, err := strconv.ParseInt(strings.TrimSpace(args), 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("invalid id: %w", err)
+		return 0, fmt.Errorf("invalid id")
 	}
 	return id, nil
 }
@@ -68,11 +69,14 @@ func resolveUserID(m *telegram.NewMessage) (int64, error) {
 func init() {
 	Register(ModuleInfo{
 		Name:        "Sudo",
-		Description: "Manage sudo users (owner only).",
+		Description: "Manage sudo users",
 		Commands: []CommandInfo{
 			{Pattern: "addsudo", Handler: addSudoHandler, Sudo: false},
+			{Pattern: "asd", Handler: addSudoHandler, Sudo: false},
 			{Pattern: "rmsudo", Handler: rmSudoHandler, Sudo: false},
-			{Pattern: "listsudo", Handler: listSudoHandler, Sudo: true},
+			{Pattern: "delsudo", Handler: rmSudoHandler, Sudo: false},
+			{Pattern: "sudolist", Handler: sudoListHandler, Sudo: true},
+			{Pattern: "sdl", Handler: sudoListHandler, Sudo: true},
 		},
 	})
 }

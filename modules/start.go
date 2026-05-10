@@ -12,10 +12,6 @@ var startTime = time.Now()
 
 const version = "v2.0.0"
 
-func goVersion() string {
-	return runtime.Version()
-}
-
 func uptimeStr() string {
 	d := time.Since(startTime).Round(time.Second)
 	h := int(d.Hours())
@@ -30,7 +26,11 @@ func uptimeStr() string {
 	return fmt.Sprintf("%ds", s)
 }
 
-// .alive command
+func goVersion() string {
+	return runtime.Version()
+}
+
+// .alive
 func aliveHandler(m *telegram.NewMessage) error {
 	msg := fmt.Sprintf(
 		"** 🥀 ᴘʙxɢᴏ 💞 **\n\n"+
@@ -40,43 +40,34 @@ func aliveHandler(m *telegram.NewMessage) error {
 			"├• **sᴜᴘᴘᴏʀᴛ-𝐂ʜᴀᴛ**: [|| ˹ᴘʙx_sᴜᴘᴘᴏʀᴛ˼ ||](https://t.me/PBXCHATS)\n"+
 			"├• **ᴜᴘᴅᴀᴛᴇs**: [ᴘʙx_ᴜᴘᴅᴀᴛᴇ](https://t.me/PBX_UPDATE)\n"+
 			"└• **ᴏᴡɴᴇʀ**: [ʙᴀᴅ ᴍᴜɴᴅᴀ](https://t.me/Badmundaxd)",
-		version,
-		uptimeStr(),
-		goVersion(),
+		version, uptimeStr(), goVersion(),
 	)
 	Reply(m, msg)
 	return nil
 }
 
-// .ping command — measures actual round-trip speed
+// .ping
 func pingHandler(m *telegram.NewMessage) error {
 	start := time.Now()
-
-	// Send initial message to measure speed
 	sent, err := Reply(m, "🏓 ᴘɪɴɢɪɴɢ...")
 	if err != nil || sent == nil {
 		return err
 	}
-
 	duration := time.Since(start).Milliseconds()
 	me := m.Client.Me()
 	mention := fmt.Sprintf("<a href=\"tg://user?id=%d\">%s</a>", me.ID, me.FirstName)
-
 	msg := fmt.Sprintf(
 		"❏ **╰☞ ᴘʙxɢᴏ**\n"+
 			"├• **╰☞ 𝐒ᴘᴇᴇᴅ** `%dms`\n"+
 			"├• **╰☞ 𝐔ᴘᴛɪᴍᴇ** `%s`\n"+
 			"└• **╰☞ 𝐍ᴀᴍᴇ:** %s",
-		duration,
-		uptimeStr(),
-		mention,
+		duration, uptimeStr(), mention,
 	)
-
 	sent.Edit(msg, &telegram.SendOptions{ParseMode: telegram.HTML})
 	return nil
 }
 
-// StartBotHandler — /start command, public (no owner filter)
+// /start — bot mode public handler
 func StartBotHandler(m *telegram.NewMessage) error {
 	msg := "✨ 𝗛ᴇʏ 𝗧ʜᴇʀᴇ..! 👋\n\n" +
 		"ɪ'ᴍ <b>ᴘʙxɢᴏ</b> — ᴀ ꜰᴀsᴛ &amp; ᴘᴏᴡᴇʀꜰᴜʟ ɢᴏ ᴜsᴇʀʙᴏᴛ ⚡\n\n" +
@@ -85,10 +76,9 @@ func StartBotHandler(m *telegram.NewMessage) error {
 		"❍ ʟɪɢʜᴛᴡᴇɪɢʜᴛ &amp; sᴍᴏᴏᴛʜ\n" +
 		"❍ ᴘᴏᴡᴇʀᴇᴅ ʙʏ ɢᴏɢʀᴀᴍ 🔥\n\n" +
 		"📖 <b>ᴄᴏᴍᴍᴀɴᴅs:</b>\n" +
-		"• <code>.alive</code>\n" +
-		"• <code>.ping</code>\n" +
-		"• <code>.help</code>"
-
+		"• <code>.alive</code> — Bot status\n" +
+		"• <code>.ping</code> — Speed check\n" +
+		"• <code>.help</code> — Command list"
 	m.Reply(msg, &telegram.SendOptions{ParseMode: telegram.HTML})
 	return nil
 }
@@ -96,7 +86,7 @@ func StartBotHandler(m *telegram.NewMessage) error {
 func init() {
 	Register(ModuleInfo{
 		Name:        "Core",
-		Description: "alive, ping commands.",
+		Description: "alive, ping commands",
 		Commands: []CommandInfo{
 			{Pattern: "alive", Handler: aliveHandler, Sudo: true},
 			{Pattern: "ping", Handler: pingHandler, Sudo: true},

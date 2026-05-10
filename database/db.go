@@ -17,7 +17,7 @@ var (
 
 func Init() {
 	if config.AppConfig.MongoURL == "" {
-		slog.Warn("MONGO_URL not set — sudo users stored in-memory only (lost on restart)")
+		slog.Warn("MONGO_URL not set — sudo users in-memory only")
 		return
 	}
 
@@ -38,14 +38,12 @@ func Init() {
 	}
 
 	SudoCollection = client.Database("pbxgo").Collection("sudo_users")
-	slog.Info("MongoDB connected", "db", "pbxgo")
+	slog.Info("✅ MongoDB connected")
 }
 
 func Disconnect() {
 	if client != nil {
-		if err := client.Disconnect(context.Background()); err != nil {
-			slog.Error("MongoDB disconnect error", "error", err)
-		}
+		_ = client.Disconnect(context.Background())
 	}
 }
 
