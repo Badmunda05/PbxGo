@@ -8,7 +8,7 @@ func helpHandler(m *telegram.NewMessage) error {
 
 <b>⚙️ CORE</b>
 <code>.alive</code> — Bot status check
-<code>.ping</code> — Speed & uptime
+<code>.ping</code> — Speed &amp; uptime
 <code>.help</code> — This menu
 <code>.restart</code> — Restart the bot
 
@@ -41,8 +41,18 @@ func helpHandler(m *telegram.NewMessage) error {
 <code>.all</code> [text] — Mention all members
 <code>.cancel</code> — Stop tagger
 
-<b>📨 INVITE</b>
-<code>.inviteall</code> [@group] — Invite all from a group
+<b>⚔️ RAID</b>
+<code>.raid</code> [count] — Bold raid
+<code>.hraid</code> [count] — Hindi raid
+<code>.eraid</code> [count] — English raid
+<code>.punraid</code> [count] — Punjabi raid
+<code>.replyraid</code> [count] — Reply raid
+<code>.hreplyraid</code> [count] — Hindi reply raid
+<code>.ereplyraid</code> [count] — English reply raid
+<code>.preplyraid</code> [count] — Punjabi reply raid
+
+<b>📥 MEDIA</b>
+<code>.save</code> — Download replied media
 
 <b>🔐 SUDO</b>
 <code>.addsudo</code> [id/reply] — Add sudo user

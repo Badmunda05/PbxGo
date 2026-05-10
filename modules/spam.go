@@ -10,7 +10,6 @@ import (
 
 // .spam [count] [text]
 func spamHandler(m *telegram.NewMessage) error {
-
 	args := GetArgs(m)
 	parts := strings.SplitN(args, " ", 2)
 
@@ -20,7 +19,6 @@ func spamHandler(m *telegram.NewMessage) error {
 	}
 
 	var count int
-
 	fmt.Sscanf(parts[0], "%d", &count)
 
 	if count < 1 || count > 200 {
@@ -29,19 +27,14 @@ func spamHandler(m *telegram.NewMessage) error {
 	}
 
 	text := parts[1]
-
 	_, _ = m.Delete()
 
 	for i := 0; i < count; i++ {
-
 		_, _ = m.Client.SendMessage(
 			m.ChatID(),
 			text,
-			&telegram.SendOptions{
-				ParseMode: telegram.MarkDown,
-			},
+			&telegram.SendOptions{ParseMode: telegram.MarkDown},
 		)
-
 		time.Sleep(100 * time.Millisecond)
 	}
 
@@ -50,7 +43,6 @@ func spamHandler(m *telegram.NewMessage) error {
 
 // .delayspam [delay_sec] [count] [text]
 func delaySpamHandler(m *telegram.NewMessage) error {
-
 	args := GetArgs(m)
 	parts := strings.SplitN(args, " ", 3)
 
@@ -61,7 +53,6 @@ func delaySpamHandler(m *telegram.NewMessage) error {
 
 	var delaySec float64
 	var count int
-
 	fmt.Sscanf(parts[0], "%f", &delaySec)
 	fmt.Sscanf(parts[1], "%d", &count)
 
@@ -71,21 +62,15 @@ func delaySpamHandler(m *telegram.NewMessage) error {
 	}
 
 	text := parts[2]
-
 	delay := time.Duration(delaySec * float64(time.Second))
-
 	_, _ = m.Delete()
 
 	for i := 0; i < count; i++ {
-
 		_, _ = m.Client.SendMessage(
 			m.ChatID(),
 			text,
-			&telegram.SendOptions{
-				ParseMode: telegram.MarkDown,
-			},
+			&telegram.SendOptions{ParseMode: telegram.MarkDown},
 		)
-
 		time.Sleep(delay)
 	}
 
@@ -94,16 +79,13 @@ func delaySpamHandler(m *telegram.NewMessage) error {
 
 // .sspam [count] — reply to sticker/media
 func stickerSpamHandler(m *telegram.NewMessage) error {
-
 	if !m.IsReply() {
 		Reply(m, "↩️ Reply to a sticker with <code>.sspam 5</code>")
 		return nil
 	}
 
 	args := GetArgs(m)
-
 	var count int
-
 	fmt.Sscanf(args, "%d", &count)
 
 	if count < 1 || count > 100 {
@@ -112,14 +94,12 @@ func stickerSpamHandler(m *telegram.NewMessage) error {
 	}
 
 	r, err := m.GetReplyMessage()
-
 	if err != nil {
 		Reply(m, "❌ Could not get replied message.")
 		return nil
 	}
 
 	media := r.Media()
-
 	if media == nil {
 		Reply(m, "↩️ Reply to a sticker/media.")
 		return nil
@@ -128,13 +108,11 @@ func stickerSpamHandler(m *telegram.NewMessage) error {
 	_, _ = m.Delete()
 
 	for i := 0; i < count; i++ {
-
 		_, _ = m.Client.SendMedia(
 			m.ChatID(),
 			media,
 			&telegram.MediaOptions{},
 		)
-
 		time.Sleep(100 * time.Millisecond)
 	}
 
@@ -142,31 +120,14 @@ func stickerSpamHandler(m *telegram.NewMessage) error {
 }
 
 func init() {
-
 	Register(ModuleInfo{
 		Name:        "Spam",
 		Description: "Spam messages/stickers",
 		Commands: []CommandInfo{
-			{
-				Pattern: "spam",
-				Handler: spamHandler,
-				Sudo:    false,
-			},
-			{
-				Pattern: "ds",
-				Handler: delaySpamHandler,
-				Sudo:    false,
-			},
-			{
-				Pattern: "delayspam",
-				Handler: delaySpamHandler,
-				Sudo:    false,
-			},
-			{
-				Pattern: "sspam",
-				Handler: stickerSpamHandler,
-				Sudo:    false,
-			},
+			{Pattern: "spam", Handler: spamHandler, Sudo: false},
+			{Pattern: "ds", Handler: delaySpamHandler, Sudo: false},
+			{Pattern: "delayspam", Handler: delaySpamHandler, Sudo: false},
+			{Pattern: "sspam", Handler: stickerSpamHandler, Sudo: false},
 		},
 	})
 }

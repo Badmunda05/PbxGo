@@ -57,67 +57,52 @@ func ereplyRaidHandler(m *telegram.NewMessage) error {
 
 // ====================== Generic Functions ======================
 
-// Normal Text Raid
+// genericTextRaid — send random raid messages
 func genericTextRaid(
 	m *telegram.NewMessage,
 	raidList []string,
 	maxCount int,
 	delay time.Duration,
 ) error {
-
 	args := GetArgs(m)
 	parts := strings.SplitN(args, " ", 2)
 
-	if len(parts) < 1 {
+	if len(parts) < 1 || parts[0] == "" {
 		Reply(m, "⚠️ Usage: <code>.raid 10</code>")
 		return nil
 	}
 
 	var count int
-
 	fmt.Sscanf(parts[0], "%d", &count)
 
 	if count < 1 || count > maxCount {
-
-		Reply(
-			m,
-			fmt.Sprintf(
-				"⚠️ Count must be between 1 and %d.",
-				maxCount,
-			),
-		)
-
+		Reply(m, fmt.Sprintf("⚠️ Count must be between 1 and %d.", maxCount))
 		return nil
 	}
 
 	_, _ = m.Delete()
 
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < count; i++ {
-
-		text := raidList[rand.Intn(len(raidList))]
-
+		text := raidList[rng.Intn(len(raidList))]
 		_, _ = m.Client.SendMessage(
 			m.ChatID(),
 			text,
-			&telegram.SendOptions{
-				ParseMode: telegram.MarkDown,
-			},
+			&telegram.SendOptions{ParseMode: telegram.MarkDown},
 		)
-
 		time.Sleep(delay)
 	}
 
 	return nil
 }
 
-// Reply Raid
+// genericReplyRaid — reply to a message with random raid messages
 func genericReplyRaid(
 	m *telegram.NewMessage,
 	raidList []string,
 	maxCount int,
 	delay time.Duration,
 ) error {
-
 	if !m.IsReply() {
 		Reply(m, "↩️ Reply to a message.")
 		return nil
@@ -126,30 +111,20 @@ func genericReplyRaid(
 	args := GetArgs(m)
 	parts := strings.SplitN(args, " ", 2)
 
-	if len(parts) < 1 {
+	if len(parts) < 1 || parts[0] == "" {
 		Reply(m, "⚠️ Usage: <code>.replyraid 10</code>")
 		return nil
 	}
 
 	var count int
-
 	fmt.Sscanf(parts[0], "%d", &count)
 
 	if count < 1 || count > maxCount {
-
-		Reply(
-			m,
-			fmt.Sprintf(
-				"⚠️ Count must be between 1 and %d.",
-				maxCount,
-			),
-		)
-
+		Reply(m, fmt.Sprintf("⚠️ Count must be between 1 and %d.", maxCount))
 		return nil
 	}
 
 	replyMsg, err := m.GetReplyMessage()
-
 	if err != nil {
 		Reply(m, "❌ Could not get replied message.")
 		return nil
@@ -157,10 +132,9 @@ func genericReplyRaid(
 
 	_, _ = m.Delete()
 
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for i := 0; i < count; i++ {
-
-		text := raidList[rand.Intn(len(raidList))]
-
+		text := raidList[rng.Intn(len(raidList))]
 		_, _ = m.Client.SendMessage(
 			m.ChatID(),
 			text,
@@ -169,7 +143,6 @@ func genericReplyRaid(
 				ParseMode: telegram.MarkDown,
 			},
 		)
-
 		time.Sleep(delay)
 	}
 
@@ -177,53 +150,18 @@ func genericReplyRaid(
 }
 
 func init() {
-
-	rand.Seed(time.Now().UnixNano())
-
 	Register(ModuleInfo{
 		Name:        "Raid",
 		Description: "Multi-language raid commands",
 		Commands: []CommandInfo{
-			{
-				Pattern: "raid",
-				Handler: raidHandler,
-				Sudo:    false,
-			},
-			{
-				Pattern: "hraid",
-				Handler: hraidHandler,
-				Sudo:    false,
-			},
-			{
-				Pattern: "eraid",
-				Handler: eraidHandler,
-				Sudo:    false,
-			},
-			{
-				Pattern: "punraid",
-				Handler: punraidHandler,
-				Sudo:    false,
-			},
-			{
-				Pattern: "replyraid",
-				Handler: replyRaidHandler,
-				Sudo:    false,
-			},
-			{
-				Pattern: "preplyraid",
-				Handler: preplyRaidHandler,
-				Sudo:    false,
-			},
-			{
-				Pattern: "hreplyraid",
-				Handler: hreplyRaidHandler,
-				Sudo:    false,
-			},
-			{
-				Pattern: "ereplyraid",
-				Handler: ereplyRaidHandler,
-				Sudo:    false,
-			},
+			{Pattern: "raid", Handler: raidHandler, Sudo: false},
+			{Pattern: "hraid", Handler: hraidHandler, Sudo: false},
+			{Pattern: "eraid", Handler: eraidHandler, Sudo: false},
+			{Pattern: "punraid", Handler: punraidHandler, Sudo: false},
+			{Pattern: "replyraid", Handler: replyRaidHandler, Sudo: false},
+			{Pattern: "preplyraid", Handler: preplyRaidHandler, Sudo: false},
+			{Pattern: "hreplyraid", Handler: hreplyRaidHandler, Sudo: false},
+			{Pattern: "ereplyraid", Handler: ereplyRaidHandler, Sudo: false},
 		},
 	})
 }

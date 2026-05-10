@@ -30,7 +30,6 @@ func mentionAllHandler(m *telegram.NewMessage) error {
 	activeTags[chatID] = true
 	activeTagsMu.Unlock()
 
-	// GetChatMembers with correct API
 	members, _, err := m.Client.GetChatMembers(chatID, &telegram.ParticipantOptions{
 		Filter: &telegram.ChannelParticipantsRecent{},
 		Limit:  200,

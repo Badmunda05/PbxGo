@@ -26,7 +26,7 @@ func Init() error {
 		LogLevel: telegram.LogInfo,
 		DeviceConfig: telegram.DeviceConfig{
 			DeviceModel:    "PbxGo",
-			SystemVersion:  "Go 1.24",
+			SystemVersion:  "Go 1.26",
 			AppVersion:     "v2.0.0",
 			LangCode:       "en",
 			SystemLangCode: "en-US",
@@ -87,7 +87,7 @@ func Init() error {
 
 	slog.Info("Logged in",
 		"name", me.FirstName,
-		"bot_id", me.ID,
+		"id", me.ID,
 		"owner_id", config.AppConfig.OwnerID,
 		"bot_mode", IsBotMode,
 	)
@@ -95,7 +95,6 @@ func Init() error {
 }
 
 // ownerFilter — only the user whose ID matches OWNER_ID can run this command.
-// Checked by Telegram SenderID — cannot be spoofed.
 func ownerFilter(m *telegram.NewMessage) error {
 	if m.SenderID() != config.AppConfig.OwnerID {
 		return fmt.Errorf("unauthorized: only owner can use this command")
@@ -119,10 +118,8 @@ func RegisterHandlers() {
 	for _, mod := range modules.RegisteredModules {
 		for _, cmd := range mod.Commands {
 			if cmd.Sudo {
-				// Sudo: true — owner + sudo users can run
 				Client.On("cmd:"+cmd.Pattern, cmd.Handler, sudoOrOwnerFilter)
 			} else {
-				// Sudo: false — owner only
 				Client.On("cmd:"+cmd.Pattern, cmd.Handler, ownerFilter)
 			}
 		}

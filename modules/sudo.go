@@ -71,12 +71,10 @@ func init() {
 		Name:        "Sudo",
 		Description: "Manage sudo users",
 		Commands: []CommandInfo{
-			// Sudo: false = owner only (add/remove is sensitive, owner-only)
 			{Pattern: "addsudo", Handler: addSudoHandler, Sudo: false},
 			{Pattern: "asd", Handler: addSudoHandler, Sudo: false},
 			{Pattern: "rmsudo", Handler: rmSudoHandler, Sudo: false},
 			{Pattern: "delsudo", Handler: rmSudoHandler, Sudo: false},
-			// Sudo: true = owner + sudo users can view the list
 			{Pattern: "sudolist", Handler: sudoListHandler, Sudo: true},
 			{Pattern: "sdl", Handler: sudoListHandler, Sudo: true},
 		},

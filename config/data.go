@@ -7,7 +7,7 @@ var RAID = []string{
 	"𝐑𝐀𝐍𝐃𝐈 𝐊𝐀 𝐁𝐀𝐂𝐂𝐇𝐀",
 }
 
-var HRAID = []string{  // Hindi Raid
+var HRAID = []string{ // Hindi Raid
 	"मादरचोद",
 	"भोसड़ीके",
 	"तेरी माँ की छूत",
@@ -17,7 +17,7 @@ var HRAID = []string{  // Hindi Raid
 	"चूतिया",
 }
 
-var ERAID = []string{  // English Raid
+var ERAID = []string{ // English Raid
 	"MADARCHOD",
 	"BHOSDIKE",
 	"FUCK YOUR MOTHER",
@@ -26,7 +26,7 @@ var ERAID = []string{  // English Raid
 	"CHUTIYAA",
 }
 
-var PUNRAID = []string{  // Punjabi Raid
+var PUNRAID = []string{ // Punjabi Raid
 	"ਮਾਦਰਚੋਦ",
 	"ਭੋਸੜੀਕੇ",
 	"ਤੇਰੀ ਮਾਂ ਦੀ ਚੁਤ",
@@ -34,9 +34,4 @@ var PUNRAID = []string{  // Punjabi Raid
 	"ਗਾਂਡੂ",
 	"ਚੂਤੀਆ",
 	"ਤੇਰੀ ਭੈਣ ਦਾ ਲਨ",
-}
-
-var PRAID = []string{  // Porn Raid (Direct Image/GIF Links)
-	"https://example.com/porn1.jpg",
-	"https://example.com/porn2.gif",
 }
