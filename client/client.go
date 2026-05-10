@@ -14,10 +14,7 @@ import (
 	"github.com/amarnathcjd/gogram/telegram"
 )
 
-var (
-	Client    *telegram.Client
-	IsBotMode bool
-)
+var Client *telegram.Client
 
 func Init() error {
 	cfg := telegram.ClientConfig{
@@ -50,16 +47,16 @@ func Init() error {
 	switch {
 	case config.AppConfig.BotToken != "":
 		slog.Info("Starting in Bot mode")
-		IsBotMode = true
+		modules.IsBotMode = true
 		if err = Client.LoginBot(config.AppConfig.BotToken); err != nil {
 			return fmt.Errorf("bot login failed: %w", err)
 		}
 	case config.AppConfig.StringSession != "":
 		slog.Info("Starting in Userbot mode")
-		IsBotMode = false
+		modules.IsBotMode = false
 	default:
 		slog.Info("No session — prompting interactive login")
-		IsBotMode = false
+		modules.IsBotMode = false
 		if err = Client.AuthPrompt(); err != nil {
 			return fmt.Errorf("auth failed: %w", err)
 		}
@@ -70,18 +67,11 @@ func Init() error {
 
 	me := Client.Me()
 
-	// CRITICAL CHECK: In bot mode, OWNER_ID must NOT equal the bot's own ID.
-	// The bot's Telegram ID and your personal Telegram user ID are different numbers.
-	// OWNER_ID must be your personal account ID (get it from @userinfobot).
-	if IsBotMode && me.ID == config.AppConfig.OwnerID {
-		slog.Error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	if modules.IsBotMode && me.ID == config.AppConfig.OwnerID {
 		slog.Error("WRONG OWNER_ID — You set OWNER_ID to the bot's own ID!")
-		slog.Error("OWNER_ID must be YOUR personal Telegram user ID,")
-		slog.Error("NOT the bot account ID.")
+		slog.Error("OWNER_ID must be YOUR personal Telegram user ID.")
 		slog.Error("Send /start to @userinfobot to get your real user ID.")
 		slog.Error(fmt.Sprintf("Bot ID (wrong): %d", me.ID))
-		slog.Error("Fix OWNER_ID in your .env file and restart.")
-		slog.Error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 		os.Exit(1)
 	}
 
@@ -89,12 +79,11 @@ func Init() error {
 		"name", me.FirstName,
 		"id", me.ID,
 		"owner_id", config.AppConfig.OwnerID,
-		"bot_mode", IsBotMode,
+		"bot_mode", modules.IsBotMode,
 	)
 	return nil
 }
 
-// ownerFilter — only the user whose ID matches OWNER_ID can run this command.
 func ownerFilter(m *telegram.NewMessage) error {
 	if m.SenderID() != config.AppConfig.OwnerID {
 		return fmt.Errorf("unauthorized: only owner can use this command")
@@ -102,7 +91,6 @@ func ownerFilter(m *telegram.NewMessage) error {
 	return nil
 }
 
-// sudoOrOwnerFilter — owner or any user in the sudo list can run this command.
 func sudoOrOwnerFilter(m *telegram.NewMessage) error {
 	sid := m.SenderID()
 	if sid == config.AppConfig.OwnerID || database.IsSudo(sid) {
@@ -112,7 +100,6 @@ func sudoOrOwnerFilter(m *telegram.NewMessage) error {
 }
 
 func RegisterHandlers() {
-	// "." prefix for userbot commands
 	Client.SetCommandPrefixes(".")
 
 	for _, mod := range modules.RegisteredModules {
@@ -126,8 +113,7 @@ func RegisterHandlers() {
 		slog.Info("Module registered", "name", mod.Name, "commands", len(mod.Commands))
 	}
 
-	// /start — public in bot mode only (anyone can use)
-	if IsBotMode {
+	if modules.IsBotMode {
 		Client.On("message:/start", modules.StartBotHandler)
 		slog.Info("Bot mode: /start handler registered (public)")
 	}

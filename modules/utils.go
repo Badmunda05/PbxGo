@@ -1,16 +1,17 @@
 package modules
 
 import (
-	"pbxgo/client"
-
 	"github.com/amarnathcjd/gogram/telegram"
 )
+
+// IsBotMode is set by the client package after login to break the import cycle.
+var IsBotMode bool
 
 // Reply sends a response:
 //   - Userbot mode: if the sender is the bot itself, it edits the message (cleaner UX)
 //   - Bot mode: always replies to the user's message
 func Reply(m *telegram.NewMessage, text string) (*telegram.NewMessage, error) {
-	if !client.IsBotMode && m.SenderID() == m.Client.Me().ID {
+	if !IsBotMode && m.SenderID() == m.Client.Me().ID {
 		return m.Edit(text, &telegram.SendOptions{ParseMode: telegram.HTML})
 	}
 	return m.Reply(text, &telegram.SendOptions{ParseMode: telegram.HTML})
