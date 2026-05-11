@@ -55,8 +55,8 @@ func StartBot() error {
 		return fmt.Errorf("bot connect: %w", err)
 	}
 
-	// Login Bot (FIXED)
-	if _, err = Bot.LoginBot(config.App.BotToken); err != nil {
+	// Login Bot
+	if err = Bot.LoginBot(config.App.BotToken); err != nil {
 		return fmt.Errorf("bot login: %w", err)
 	}
 
