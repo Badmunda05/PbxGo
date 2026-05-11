@@ -1,37 +1,24 @@
 package modules
 
 import (
+	"strings"
+
 	"github.com/amarnathcjd/gogram/telegram"
 )
 
-// IsBotMode is set by the client package after login to break the import cycle.
-var IsBotMode bool
-
-// Reply sends a response:
-//   - Userbot mode: if the sender is the bot itself, it edits the message (cleaner UX)
-//   - Bot mode: always replies to the user's message
+// Reply — edit if own message (userbot), reply otherwise
 func Reply(m *telegram.NewMessage, text string) (*telegram.NewMessage, error) {
-	if !IsBotMode && m.SenderID() == m.Client.Me().ID {
+	if m.SenderID() == m.Client.Me().ID {
 		return m.Edit(text, &telegram.SendOptions{ParseMode: telegram.HTML})
 	}
 	return m.Reply(text, &telegram.SendOptions{ParseMode: telegram.HTML})
 }
 
-// GetArgs returns the text after the command word.
-// Example: ".spam 5 hello" → "5 hello"
+// GetArgs — text after command word
 func GetArgs(m *telegram.NewMessage) string {
-	text := m.Text()
-	if idx := findSpace(text); idx != -1 {
-		return text[idx+1:]
+	t := m.Text()
+	if i := strings.IndexByte(t, ' '); i != -1 {
+		return strings.TrimSpace(t[i+1:])
 	}
 	return ""
-}
-
-func findSpace(s string) int {
-	for i, c := range s {
-		if c == ' ' {
-			return i
-		}
-	}
-	return -1
 }

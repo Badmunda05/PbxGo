@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -15,14 +16,18 @@ type sudoEntry struct {
 	UserID int64 `bson:"user_id"`
 }
 
+func upsertOpt() *options.UpdateOneOptionsBuilder {
+	return options.UpdateOne().SetUpsert(true)
+}
+
 func LoadSudoUsers() {
 	if !IsConnected() {
 		return
 	}
-	ctx := context.Background()
-	cursor, err := SudoCollection.Find(ctx, bson.D{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cursor, err := SudoColl.Find(ctx, bson.D{})
 	if err != nil {
-		slog.Error("Failed to load sudo users", "error", err)
 		return
 	}
 	defer cursor.Close(ctx)
@@ -40,34 +45,33 @@ func LoadSudoUsers() {
 func AddSudo(userID int64) {
 	sudoUsers.Store(userID, true)
 	if IsConnected() {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 		filter := bson.D{{Key: "user_id", Value: userID}}
 		update := bson.D{{Key: "$setOnInsert", Value: bson.D{{Key: "user_id", Value: userID}}}}
-		opts := options.UpdateOne().SetUpsert(true)
-		if _, err := SudoCollection.UpdateOne(ctx, filter, update, opts); err != nil {
-			slog.Error("Failed to persist sudo add", "user_id", userID, "error", err)
-		}
+		_, _ = SudoColl.UpdateOne(ctx, filter, update, upsertOpt())
 	}
 }
 
 func RemoveSudo(userID int64) {
 	sudoUsers.Delete(userID)
 	if IsConnected() {
-		ctx := context.Background()
-		_, _ = SudoCollection.DeleteOne(ctx, bson.D{{Key: "user_id", Value: userID}})
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_, _ = SudoColl.DeleteOne(ctx, bson.D{{Key: "user_id", Value: userID}})
 	}
-}
-
-func FetchSudoList() []int64 {
-	var list []int64
-	sudoUsers.Range(func(key, _ any) bool {
-		list = append(list, key.(int64))
-		return true
-	})
-	return list
 }
 
 func IsSudo(userID int64) bool {
 	_, ok := sudoUsers.Load(userID)
 	return ok
+}
+
+func FetchSudoList() []int64 {
+	var list []int64
+	sudoUsers.Range(func(k, _ any) bool {
+		list = append(list, k.(int64))
+		return true
+	})
+	return list
 }

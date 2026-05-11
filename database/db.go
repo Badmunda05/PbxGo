@@ -11,42 +11,37 @@ import (
 )
 
 var (
-	client         *mongo.Client
-	SudoCollection *mongo.Collection
+	mClient    *mongo.Client
+	db         *mongo.Database
+	Sessions   *mongo.Collection
+	SudoColl   *mongo.Collection
 )
 
 func Init() {
-	if config.AppConfig.MongoURL == "" {
-		slog.Warn("MONGO_URL not set — sudo users in-memory only")
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	var err error
-	client, err = mongo.Connect(options.Client().ApplyURI(config.AppConfig.MongoURL))
+	mClient, err = mongo.Connect(options.Client().ApplyURI(config.App.MongoURL))
 	if err != nil {
 		slog.Error("MongoDB connect failed", "error", err)
 		return
 	}
-
-	if err = client.Ping(ctx, nil); err != nil {
+	if err = mClient.Ping(ctx, nil); err != nil {
 		slog.Error("MongoDB ping failed", "error", err)
-		client = nil
+		mClient = nil
 		return
 	}
-
-	SudoCollection = client.Database("pbxgo").Collection("sudo_users")
+	db = mClient.Database("pbxgo")
+	Sessions = db.Collection("sessions")
+	SudoColl = db.Collection("sudo_users")
 	slog.Info("✅ MongoDB connected")
 }
 
-func Disconnect() {
-	if client != nil {
-		_ = client.Disconnect(context.Background())
-	}
-}
+func IsConnected() bool { return mClient != nil }
 
-func IsConnected() bool {
-	return client != nil
+func Disconnect() {
+	if mClient != nil {
+		_ = mClient.Disconnect(context.Background())
+	}
 }
