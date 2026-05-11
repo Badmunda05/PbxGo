@@ -126,7 +126,7 @@ func newSessionHandler(m *telegram.NewMessage) error {
 	// Run login in goroutine (it blocks waiting for callbacks)
 	doneCh := make(chan error, 1)
 	go func() {
-		loginErr := c.Login(phone, &telegram.LoginOptions{
+		_, loginErr := c.Login(phone, &telegram.LoginOptions{
 			CodeCallback: func() (string, error) {
 				editMsg(prog,
 					"✅ <b>OTP Sent!</b>\n\n"+
